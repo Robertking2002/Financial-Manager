@@ -650,28 +650,58 @@ function logout() {
 }
 
 function checkLogin() {
-  // Check if already logged in this session
+  // Already logged in this session?
   if (sessionStorage.getItem('finance_logged_in') === 'true') {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     return true;
   }
-  // Check remember me
+
+  // Check for "remember me" credentials
   var remembered = localStorage.getItem('finance_remember');
   if (remembered) {
     try {
       var creds = JSON.parse(remembered);
-      var users = getUsers();
-      if (users[creds.username] && users[creds.username] === creds.password) {
-        sessionStorage.setItem('finance_logged_in', 'true');
-        sessionStorage.setItem('finance_user', creds.username);
-        document.getElementById('loginOverlay').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'block';
-        return true;
-      }
-    } catch(e) {}
+      var username = creds.username;
+      var password = creds.password;
+
+      // Instead of checking localStorage 'finance_users', verify via Firebase
+      // Use a synchronous-looking promise, but we need to return a promise or handle async
+      // For simplicity, we'll do an async check and either auto-login or show login screen.
+      db.ref('_auth/' + username).once('value')
+        .then(function(snapshot) {
+          var authData = snapshot.val();
+          if (authData && authData.password === btoa(password)) {
+            // Auto-login successful
+            sessionStorage.setItem('finance_logged_in', 'true');
+            sessionStorage.set('finance_user', username);
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            showToast('Welcome back, ' + username);
+            init(); // re-initialize with data
+          } else {
+            // Invalid credentials – show login screen
+            showLoginScreen();
+          }
+        })
+        .catch(function() {
+          showLoginScreen();
+        });
+      return false; // we'll handle async, so return false for now
+    } catch(e) {
+      showLoginScreen();
+      return false;
+    }
+  } else {
+    showLoginScreen();
+    return false;
   }
-  return false;
+}
+
+function showLoginScreen() {
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('appContainer').style.display = 'none';
+  showLogin(); // show the login form (not register)
 }
 
 // Override init to check login first// Override init to check login first
