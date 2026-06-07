@@ -219,6 +219,11 @@ const firebaseConfig = {
   appId: "1:678473296203:web:f6d5aee499ad7ed817e0ce"
 };
 firebase.initializeApp(firebaseConfig);
+if (!checkLogin()) {
+  attemptAutoLogin();
+} else {
+  // already logged in via session
+}
 const db = firebase.database();
 // ============================================================================
 </script>
@@ -650,58 +655,19 @@ function logout() {
 }
 
 function checkLogin() {
-  // Already logged in this session?
   if (sessionStorage.getItem('finance_logged_in') === 'true') {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     return true;
   }
-
-  // Check for "remember me" credentials
-  var remembered = localStorage.getItem('finance_remember');
-  if (remembered) {
-    try {
-      var creds = JSON.parse(remembered);
-      var username = creds.username;
-      var password = creds.password;
-
-      // Instead of checking localStorage 'finance_users', verify via Firebase
-      // Use a synchronous-looking promise, but we need to return a promise or handle async
-      // For simplicity, we'll do an async check and either auto-login or show login screen.
-      db.ref('_auth/' + username).once('value')
-        .then(function(snapshot) {
-          var authData = snapshot.val();
-          if (authData && authData.password === btoa(password)) {
-            // Auto-login successful
-            sessionStorage.setItem('finance_logged_in', 'true');
-            sessionStorage.set('finance_user', username);
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'block';
-            showToast('Welcome back, ' + username);
-            init(); // re-initialize with data
-          } else {
-            // Invalid credentials – show login screen
-            showLoginScreen();
-          }
-        })
-        .catch(function() {
-          showLoginScreen();
-        });
-      return false; // we'll handle async, so return false for now
-    } catch(e) {
-      showLoginScreen();
-      return false;
-    }
-  } else {
-    showLoginScreen();
-    return false;
-  }
+  return false;
 }
 
+// Show the login screen (hides the main app)
 function showLoginScreen() {
   document.getElementById('loginOverlay').style.display = 'flex';
   document.getElementById('appContainer').style.display = 'none';
-  showLogin(); // show the login form (not register)
+  showLogin(); // this is your existing function that shows login form
 }
 
 // Override init to check login first// Override init to check login first
@@ -782,11 +748,9 @@ function updateOverview() {
 var expensePieChart = null, incomePieChart = null;
 
 function ensureDataStructure(data) {
-  // If data is null/undefined, start fresh
   if (!data || typeof data !== 'object') {
     data = {};
   }
-  // Guarantee all required arrays exist
   if (!data.cards) data.cards = [];
   if (!data.currencies) data.currencies = [];
   if (!data.cash) data.cash = [];
@@ -2056,22 +2020,15 @@ function getLocalData() {
 function init() {
   var user = getCurrentUser();
   if (!user) {
+    // No user logged in – fallback to local data (should not happen, but safe)
     var local = getLocalData();
-    if (local) DATA = local;
+    if (local) DATA = ensureDataStructure(local);
     renderAll();
     updateCharts();
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-      // Debounce: wait 150ms after resize stops, then redraw charts
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(function() {
-        updateCharts();
-      }, 150);
-    });
     startLiveSync();
     return;
   }
-  
+
   // Load from Firebase
   db.ref('users/' + user).once('value')
     .then(function(snapshot) {
@@ -2084,9 +2041,9 @@ function init() {
         }
         setSyncStatus('sync-ok', 'Loaded from Firebase');
       } else {
-        // No data in Firebase yet - try local
+        // No data in Firebase yet – try local
         var local = getLocalData();
-        if (local) DATA = local;
+        if (local) DATA = ensureDataStructure(local);
         // Save initial data to Firebase
         saveToServer(false);
       }
@@ -2097,7 +2054,7 @@ function init() {
     .catch(function(err) {
       console.error('Firebase load error:', err);
       var local = getLocalData();
-      if (local) DATA = local;
+      if (local) DATA = ensureDataStructure(local);
       renderAll();
       updateCharts();
       setSyncStatus('sync-error', 'Firebase offline');
@@ -2105,6 +2062,41 @@ function init() {
     });
 }
 
+function attemptAutoLogin() {
+  var remembered = localStorage.getItem('finance_remember');
+  if (!remembered) {
+    showLoginScreen();
+    return;
+  }
+  try {
+    var creds = JSON.parse(remembered);
+    var username = creds.username;
+    var password = creds.password;
+    db.ref('_auth/' + username).once('value')
+      .then(function(snapshot) {
+        var authData = snapshot.val();
+        if (authData && authData.password === btoa(password)) {
+          // Credentials valid – auto-login
+          sessionStorage.setItem('finance_logged_in', 'true');
+          sessionStorage.setItem('finance_user', username);
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('appContainer').style.display = 'block';
+          showToast('Welcome back, ' + username);
+          init(); // load data and start sync
+        } else {
+          // Invalid credentials – show login
+          showLoginScreen();
+        }
+      })
+      .catch(function(err) {
+        console.error('Auto-login Firebase error:', err);
+        showLoginScreen();
+      });
+  } catch(e) {
+    console.error('Auto-login parse error:', e);
+    showLoginScreen();
+  }
+}
 // Sync localStorage to match current DATA (prevents stale localStorage from overriding server data)
 function syncLocalStorageWithData() {
   try {
