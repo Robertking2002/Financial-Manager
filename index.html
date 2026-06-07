@@ -281,7 +281,7 @@ function ensureDataStructure(data) {
   return data;
 }
 
-// ================== LOGIN SYSTEM (with async auto‑login for iPhone) ==================
+// ================== LOGIN SYSTEM ==================
 function showLogin() {
   document.getElementById('loginForm').style.display = 'block';
   document.getElementById('registerForm').style.display = 'none';
@@ -398,7 +398,6 @@ function doRegister() {
       errorEl.style.display = 'block';
     });
 }
-// Synchronous check (fast) – only looks at sessionStorage
 function checkLogin() {
   if (sessionStorage.getItem('finance_logged_in') === 'true') {
     document.getElementById('loginOverlay').style.display = 'none';
@@ -407,7 +406,6 @@ function checkLogin() {
   }
   return false;
 }
-// Async auto‑login using saved credentials (works on iPhone home screen)
 function attemptAutoLogin() {
   var remembered = localStorage.getItem('finance_remember');
   if (!remembered) {
@@ -454,7 +452,11 @@ function renderCards() {
   if (!container) return;
   var html = '';
   DATA.cards.forEach(function(c, i) {
-    html += '<div class="asset-item"><button class="remove-btn" onclick="removeAsset(\'cards\',' + i + ')">X</button><div class="name" onclick="editName(this)" data-index="' + i + '" data-type="cards">' + escapeHtml(c.name) + '</div><div class="value green" onclick="editValue(this)" data-index="' + i + '" data-type="cards">' + escapeHtml(c.value) + '</div></div>';
+    html += '<div class="asset-item">';
+    html += '<button class="remove-btn" onclick="removeAsset(\'cards\',' + i + ')">X</button>';
+    html += '<div class="name" onclick="editName(this)" data-index="' + i + '" data-type="cards">' + escapeHtml(c.name) + '</div>';
+    html += '<div class="value green" onclick="editValue(this)" data-index="' + i + '" data-type="cards">' + escapeHtml(c.value) + '</div>';
+    html += '</div>';
   });
   container.innerHTML = html;
 }
@@ -463,7 +465,11 @@ function renderCash() {
   if (!container) return;
   var html = '';
   DATA.cash.forEach(function(c, i) {
-    html += '<div class="asset-item"><button class="remove-btn" onclick="removeAsset(\'cash\',' + i + ')">X</button><div class="name" onclick="editName(this)" data-index="' + i + '" data-type="cash">' + escapeHtml(c.name) + '</div><div class="value orange" onclick="editValue(this)" data-index="' + i + '" data-type="cash">' + escapeHtml(c.value) + '</div></div>';
+    html += '<div class="asset-item">';
+    html += '<button class="remove-btn" onclick="removeAsset(\'cash\',' + i + ')">X</button>';
+    html += '<div class="name" onclick="editName(this)" data-index="' + i + '" data-type="cash">' + escapeHtml(c.name) + '</div>';
+    html += '<div class="value orange" onclick="editValue(this)" data-index="' + i + '" data-type="cash">' + escapeHtml(c.value) + '</div>';
+    html += '</div>';
   });
   container.innerHTML = html;
 }
@@ -472,7 +478,14 @@ function renderCrypto() {
   if (!container) return;
   var html = '';
   DATA.crypto.forEach(function(c, i) {
-    html += '<div class="asset-item"><button class="remove-btn" onclick="removeAsset(\'crypto\',' + i + ')">X</button><div class="name" style="cursor:pointer;" onclick="editCryptoName(this,' + i + ')">' + escapeHtml(c.name) + '</div><div class="value" style="color:#f7931a;">' + escapeHtml(c.value) + '</div><div style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#f7931a;cursor:pointer;" onclick="editCryptoAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div><div style="font-size:0.75rem;color:#666;">Price: ' + escapeHtml(c.price || '€0.00') + '</div>' + (c.status ? '<div style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>' : '') + '</div>';
+    html += '<div class="asset-item">';
+    html += '<button class="remove-btn" onclick="removeAsset(\'crypto\',' + i + ')">X</button>';
+    html += '<div class="name" style="cursor:pointer;" onclick="editCryptoName(this,' + i + ')">' + escapeHtml(c.name) + '</div>';
+    html += '<div class="value" style="color:#f7931a;">' + escapeHtml(c.value) + '</div>';
+    html += '<div style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#f7931a;cursor:pointer;" onclick="editCryptoAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div>';
+    html += '<div style="font-size:0.75rem;color:#666;">Price: ' + escapeHtml(c.price || '€0.00') + '</div>';
+    if (c.status) html += '<div style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>';
+    html += '</div>';
   });
   container.innerHTML = html;
 }
@@ -481,7 +494,13 @@ function renderCurrencies() {
   if (!container) return;
   var html = '';
   DATA.currencies.forEach(function(c, i) {
-    html += '<div class="asset-item"><button class="remove-btn" onclick="removeAsset(\'currencies\',' + i + ')">X</button><div class="name" onclick="editName(this)" data-index="' + i + '" data-type="currencies">' + escapeHtml(c.name) + '</div><div class="value" onclick="editValue(this)" data-index="' + i + '" data-type="currencies">' + escapeHtml(c.value) + '</div><div style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#36A2EB;cursor:pointer;" onclick="editCurrencyAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div>' + (c.status ? '<div style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>' : '') + '</div>';
+    html += '<div class="asset-item">';
+    html += '<button class="remove-btn" onclick="removeAsset(\'currencies\',' + i + ')">X</button>';
+    html += '<div class="name" onclick="editName(this)" data-index="' + i + '" data-type="currencies">' + escapeHtml(c.name) + '</div>';
+    html += '<div class="value" onclick="editValue(this)" data-index="' + i + '" data-type="currencies">' + escapeHtml(c.value) + '</div>';
+    html += '<div style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#36A2EB;cursor:pointer;" onclick="editCurrencyAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div>';
+    if (c.status) html += '<div style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>';
+    html += '</div>';
   });
   container.innerHTML = html;
 }
@@ -564,12 +583,14 @@ function updateQuickForm() {
   // Show/hide custom category input based on selection
   var customGroup = document.getElementById('customCategoryGroup');
   var selected = catSel.value;
-  if (selected === 'Other' || selected === 'Other Income') {
-    if (customGroup) customGroup.style.display = 'block';
-  } else {
-    if (customGroup) customGroup.style.display = 'none';
-    var customInput = document.getElementById('customCategory');
-    if (customInput) customInput.value = '';
+  if (customGroup) {
+    if (selected === 'Other' || selected === 'Other Income') {
+      customGroup.style.display = 'block';
+    } else {
+      customGroup.style.display = 'none';
+      var customInput = document.getElementById('customCategory');
+      if (customInput) customInput.value = '';
+    }
   }
 }
 function populateTransferAccounts() {
@@ -591,7 +612,7 @@ function renderTransactions() {
   var html = '';
   (DATA.transactions || []).slice().reverse().forEach(function(t) {
     var amount = parseFloat(t.amount) || 0, isIncome = amount >= 0;
-    html += '<tr>';
+    html += '<table>';
     html += '<td>' + escapeHtml(t.date||'') + '</td>';
     html += '<td>' + escapeHtml(t.category||'') + '</td>';
     html += '<td class="'+(isIncome?'income':'expense')+'">'+(isIncome?'€':'-€')+Math.abs(amount).toFixed(2)+'</td>';
@@ -604,7 +625,7 @@ function renderTransactions() {
     html += '<td>' + escapeHtml(methodDisplay) + '</td>';
     html += '<td>' + escapeHtml(t.description||'') + '</td>';
     html += '<td><button class="btn-remove-tx" onclick="removeTransaction('+t.id+')">X</button></td>';
-    html += '<tr>';
+    html += '</tr>';
   });
   if (html === '') html = '<tr><td colspan="7" style="text-align:center;color:#666;padding:20px;">No transactions yet</td></tr>';
   tbody.innerHTML = html;
@@ -690,30 +711,446 @@ function addTransaction() {
   saveToServer(false);
 }
 function doTransfer() {
-  // ... (unchanged from original, omitted for brevity but must be included)
-  // I will keep the full existing doTransfer from the user's code.
+  var fromAcc = document.getElementById('transfer-from').value;
+  var toAcc = document.getElementById('transfer-to').value;
+  var amount = parseFloat(document.getElementById('transfer-amount').value);
+  var desc = document.getElementById('transfer-desc').value;
+  var resultDiv = document.getElementById('transfer-result');
+  if (!amount || amount <= 0) { resultDiv.innerHTML = '<span style="color:#ef4444;">Please enter a valid amount</span>'; return; }
+  if (fromAcc === toAcc) { resultDiv.innerHTML = '<span style="color:#ef4444;">Cannot transfer to the same account</span>'; return; }
+  resultDiv.innerHTML = '<span style="color:#888;">Processing...</span>';
+  var fromParts = fromAcc.split('|'), toParts = toAcc.split('|');
+  var fromType = fromParts[0].toLowerCase(), fromName = fromParts[1];
+  var toType = toParts[0].toLowerCase(), toName = toParts[1];
+  var sourceFound = false, targetFound = false;
+  if (fromType === 'card') {
+    for (var i = 0; i < DATA.cards.length; i++) {
+      if (DATA.cards[i].name.toLowerCase() === fromName.toLowerCase()) {
+        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        if (curr < amount) { resultDiv.innerHTML = '<span style="color:#ef4444;">Insufficient funds in ' + fromAcc + '</span>'; return; }
+        DATA.cards[i].value = (curr - amount).toFixed(2) + ' EUR';
+        sourceFound = true; break;
+      }
+    }
+  } else if (fromType === 'cash') {
+    for (var i = 0; i < DATA.cash.length; i++) {
+      if (DATA.cash[i].name.toLowerCase() === fromName.toLowerCase()) {
+        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        if (curr < amount) { resultDiv.innerHTML = '<span style="color:#ef4444;">Insufficient funds in ' + fromAcc + '</span>'; return; }
+        DATA.cash[i].value = (curr - amount).toFixed(2) + ' EUR';
+        sourceFound = true; break;
+      }
+    }
+  }
+  if (!sourceFound) { resultDiv.innerHTML = '<span style="color:#ef4444;">Source account not found</span>'; return; }
+  if (toType === 'card') {
+    for (var i = 0; i < DATA.cards.length; i++) {
+      if (DATA.cards[i].name.toLowerCase() === toName.toLowerCase()) {
+        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cards[i].value = (curr + amount).toFixed(2) + ' EUR';
+        targetFound = true; break;
+      }
+    }
+  } else if (toType === 'cash') {
+    for (var i = 0; i < DATA.cash.length; i++) {
+      if (DATA.cash[i].name.toLowerCase() === toName.toLowerCase()) {
+        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cash[i].value = (curr + amount).toFixed(2) + ' EUR';
+        targetFound = true; break;
+      }
+    }
+  }
+  if (!targetFound) { resultDiv.innerHTML = '<span style="color:#ef4444;">Target account not found</span>'; return; }
+  if (!DATA.transactions) DATA.transactions = [];
+  var maxId = 0;
+  for (var i = 0; i < DATA.transactions.length; i++) if (DATA.transactions[i].id > maxId) maxId = DATA.transactions[i].id;
+  DATA.transactions.push({
+    id: maxId + 1, type: 'Transfer', amount: '-' + amount.toFixed(2) + ' EUR',
+    method: fromAcc + ' -> ' + toAcc, category: 'Transfer', description: desc || 'Transfer', date: new Date().toISOString().split('T')[0]
+  });
+  _lastSyncHash = _computeDataHash(DATA);
+  syncLocalStorageWithData();
+  renderAll(); updateCharts();
+  saveToServer(false);
+  resultDiv.innerHTML = '<span style="color:#4ade80;">Transfer done</span>';
 }
 async function removeTransaction(id) {
-  // ... (unchanged)
+  var confirmed = await showModal('Remove Transaction', 'Remove this transaction and reverse the balance change?');
+  if (!confirmed) return;
+  var txn = null;
+  for (var i = 0; i < DATA.transactions.length; i++) if (DATA.transactions[i].id === id) { txn = DATA.transactions[i]; break; }
+  if (!txn) { showToast('Transaction not found'); return; }
+  var amount = Math.abs(parseFloat(String(txn.amount).replace(/[^0-9.-]/g, '')) || 0);
+  var method = txn.method || '';
+  var txnType = txn.type || '';
+  var methodParts = method.split('|');
+  var methodType = methodParts[0].toLowerCase();
+  if (txnType === 'expense') {
+    if (methodType === 'card' && methodParts.length >= 2) {
+      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cards[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
+      }
+    } else if (methodType === 'cash' && methodParts.length >= 2) {
+      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cash[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
+      }
+    }
+  } else if (txnType === 'income') {
+    if (methodType === 'card' && methodParts.length >= 2) {
+      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cards[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
+      }
+    } else if (methodType === 'cash' && methodParts.length >= 2) {
+      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cash[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
+      }
+    }
+  } else if (txnType === 'Transfer' && method.indexOf('->') >= 0) {
+    var parts = method.split('->');
+    var fromAcc = parts[0].trim(), toAcc = parts[1].trim();
+    var fromParts = fromAcc.split('|'), toParts = toAcc.split('|');
+    if (fromParts[0].toLowerCase() === 'card') {
+      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === fromParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cards[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
+      }
+    } else if (fromParts[0].toLowerCase() === 'cash') {
+      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === fromParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cash[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
+      }
+    }
+    if (toParts[0].toLowerCase() === 'card') {
+      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === toParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cards[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
+      }
+    } else if (toParts[0].toLowerCase() === 'cash') {
+      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === toParts[1].toLowerCase()) {
+        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
+        DATA.cash[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
+      }
+    }
+  }
+  DATA.transactions = DATA.transactions.filter(function(t) { return t.id !== id; });
+  _lastSyncHash = _computeDataHash(DATA);
+  syncLocalStorageWithData();
+  renderAll(); updateCharts();
+  saveToServer(false);
+  showToast('Transaction removed');
 }
 function addCard() { DATA.cards.push({ name: 'New Card', value: '€0.00' }); renderCards(); saveToServer(true); }
 function addCashItem() { DATA.cash.push({ name: 'New Location', value: '€0.00' }); renderCash(); saveToServer(true); }
 async function removeAsset(type, index) { if (await showModal('Remove Item', 'Remove this item? This cannot be undone.')) { DATA[type].splice(index, 1); renderAll(); saveToServer(true); } }
-// ... other editing functions (editValue, editName, editCryptoAmount, editCryptoName, editCurrencyAmount, gatherDataFromUI) are the same as in original.
-async function addCrypto() { /* keep original */ }
-async function addCurrency() { /* keep original */ }
-function fetchCryptoPrice(coinName, idx, cb) { /* keep original */ }
-function refreshCryptoPrices() { /* keep original */ }
-function fetchCurrencyRate(currName, idx, cb) { /* keep original */ }
-function refreshCurrencyRates() { /* keep original */ }
+
+// ================== EDITING FUNCTIONS ==================
+function editValue(el) {
+  if (el.querySelector('input')) return;
+  var current = el.innerText.trim();
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  el.innerHTML = '';
+  el.appendChild(input);
+  input.focus();
+  input.select();
+  var save = function() {
+    var newVal = input.value.trim();
+    if (newVal === '') newVal = current;
+    var num = parseFloat(newVal.replace(/[€$£¥,]/g, ''));
+    if (!isNaN(num)) {
+      var symbol = current.match(/^[€$£¥]/);
+      var prefix = symbol ? symbol[0] : '';
+      el.innerText = prefix + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+      el.innerText = newVal;
+    }
+    el.classList.remove('editing');
+    gatherDataFromUI();
+    updateOverview();
+    showToast('Saved');
+    saveToServer(true);
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { el.innerText = current; el.classList.remove('editing'); }
+  });
+}
+function editName(el) {
+  if (el.querySelector('input')) return;
+  var current = el.innerText.trim();
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.style.cssText = 'background:transparent;border:1px solid #4ade80;border-radius:4px;color:#fff;font-size:0.8rem;text-align:center;outline:none;padding:2px 4px;width:100%;';
+  el.innerHTML = '';
+  el.appendChild(input);
+  input.focus();
+  input.select();
+  var save = function() {
+    var newVal = input.value.trim();
+    if (newVal === '') newVal = current;
+    el.innerText = newVal;
+    gatherDataFromUI();
+    saveToLocalStorage();
+    showToast('Renamed');
+    saveToServer(true);
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') el.innerText = current;
+  });
+}
+function editCryptoAmount(el, index) {
+  if (el.querySelector('input')) return;
+  var current = el.innerText.trim();
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.style.cssText = 'background:transparent;border:1px solid #f7931a;border-radius:4px;color:#fff;font-size:0.8rem;text-align:center;outline:none;padding:2px 4px;width:80px;';
+  el.innerHTML = '';
+  el.appendChild(input);
+  input.focus();
+  input.select();
+  var save = function() {
+    var newVal = input.value.trim();
+    if (newVal === '') newVal = current;
+    el.innerText = newVal;
+    if (DATA.crypto[index]) {
+      DATA.crypto[index].amount = newVal;
+      var price = parseFloat((DATA.crypto[index].price || '€0').replace(/[€$£¥,]/g, '')) || 0;
+      var amt = parseFloat(newVal.replace(/[€$£¥,]/g, '')) || 0;
+      DATA.crypto[index].value = '€' + (price * amt).toLocaleString('en-US', { minimumFractionDigits: 2 });
+    }
+    renderCrypto();
+    updateOverview();
+    showToast('Amount updated');
+    saveToServer(true);
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') el.innerText = current;
+  });
+}
+function editCryptoName(el, index) {
+  if (el.querySelector('input')) return;
+  var current = el.innerText.trim();
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.style.cssText = 'background:transparent;border:1px solid #f7931a;border-radius:4px;color:#fff;font-size:0.8rem;text-align:center;outline:none;padding:2px 4px;width:100%;';
+  el.innerHTML = '';
+  el.appendChild(input);
+  input.focus();
+  input.select();
+  var save = function() {
+    var newVal = input.value.trim();
+    if (newVal === '') newVal = current;
+    el.innerText = newVal;
+    if (DATA.crypto[index]) {
+      DATA.crypto[index].name = newVal;
+      DATA.crypto[index].status = 'Fetching price for ' + newVal + '...';
+      fetchCryptoPrice(newVal, index);
+    }
+    renderCrypto();
+    showToast('Crypto renamed, fetching price...');
+    saveToServer(true);
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') el.innerText = current;
+  });
+}
+function editCurrencyAmount(el, index) {
+  if (el.querySelector('input')) return;
+  var current = el.innerText.trim();
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.style.cssText = 'background:transparent;border:1px solid #36A2EB;border-radius:4px;color:#fff;font-size:0.8rem;text-align:center;outline:none;padding:2px 4px;width:80px;';
+  el.innerHTML = '';
+  el.appendChild(input);
+  input.focus();
+  input.select();
+  var save = function() {
+    var newVal = input.value.trim();
+    if (newVal === '') newVal = current;
+    el.innerText = newVal;
+    if (DATA.currencies[index]) {
+      DATA.currencies[index].amount = newVal;
+      var rate = parseFloat(DATA.currencies[index].rate) || 0;
+      var amt = parseFloat(newVal.replace(/[€$£¥,]/g, '')) || 0;
+      if (rate > 0) {
+        DATA.currencies[index].value = '€' + (rate * amt).toLocaleString('en-US', { minimumFractionDigits: 2 });
+      }
+    }
+    renderCurrencies();
+    updateOverview();
+    showToast('Amount updated');
+    saveToServer(true);
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') el.innerText = current;
+  });
+}
+function gatherDataFromUI() {
+  ['cards-container', 'currencies-container', 'cash-container'].forEach(function(id) {
+    var container = document.getElementById(id);
+    if (!container) return;
+    var items = container.querySelectorAll('.asset-item');
+    var type = id.replace('-container', '');
+    DATA[type] = [];
+    items.forEach(function(item) {
+      var nameEl = item.querySelector('.name');
+      var valEl = item.querySelector('.value');
+      if (nameEl && valEl) {
+        DATA[type].push({ name: nameEl.innerText.trim(), value: valEl.innerText.trim() });
+      }
+    });
+  });
+}
+
+// ================== SMART ADD CRYPTO & CURRENCY ==================
+async function addCrypto() {
+  var coinName = await showModal('Add Cryptocurrency', 'Enter cryptocurrency name:', true, 'Coin name', 'e.g. Bitcoin, Ethereum');
+  if (!coinName) return;
+  coinName = coinName.trim();
+  if (coinName === '') return;
+  var exists = DATA.crypto.some(function(c) { return c.name.toLowerCase() === coinName.toLowerCase(); });
+  if (exists) { showToast('"' + coinName + '" already exists in your portfolio!', true); return; }
+  var amountStr = await showModal('Amount', 'How many ' + coinName + ' did you buy?', true, 'Amount', 'e.g. 0.5, 2, 10');
+  if (!amountStr) return;
+  amountStr = amountStr.trim();
+  if (amountStr === '') return;
+  var amount = parseFloat(amountStr.replace(/,/g, ''));
+  if (isNaN(amount) || amount <= 0) { showToast('Invalid amount entered', true); return; }
+  var newCoin = {
+    name: coinName, value: '€0.00', amount: amount.toString(), price: '€0.00', status: 'Fetching price...'
+  };
+  DATA.crypto.push(newCoin);
+  renderCrypto();
+  showToast('Fetching live price for ' + coinName + '...');
+  fetchCryptoPrice(coinName, DATA.crypto.length - 1);
+}
+async function addCurrency() {
+  var currName = await showModal('Add Currency', 'Enter currency name or code:', true, 'Currency', 'e.g. USD, JPY, GBP');
+  if (!currName) return;
+  currName = currName.trim();
+  if (currName === '') return;
+  var exists = DATA.currencies.some(function(c) { return c.name.toLowerCase() === currName.toLowerCase(); });
+  if (exists) { showToast('"' + currName + '" already exists!', true); return; }
+  var amountStr = await showModal('Amount', 'How much ' + currName + ' do you have?', true, 'Amount', 'e.g. 100, 500.50');
+  if (!amountStr) return;
+  amountStr = amountStr.trim();
+  if (amountStr === '') return;
+  var amount = parseFloat(amountStr.replace(/,/g, ''));
+  if (isNaN(amount) || amount <= 0) { showToast('Invalid amount entered', true); return; }
+  var newCurr = {
+    name: currName, value: '€0.00', amount: amount.toString(), status: 'Fetching rate...'
+  };
+  DATA.currencies.push(newCurr);
+  renderCurrencies();
+  showToast('Fetching live exchange rate for ' + currName + '...');
+  fetchCurrencyRate(currName, DATA.currencies.length - 1);
+}
+
+// ================== CRYPTO & CURRENCY API ==================
+var COINGECKO_CRYPTO_MAP = { 'bitcoin':'bitcoin','btc':'bitcoin','ethereum':'ethereum','eth':'ethereum','solana':'solana','sol':'solana','cardano':'cardano','ada':'cardano','ripple':'ripple','xrp':'ripple','polkadot':'polkadot','dot':'polkadot','dogecoin':'dogecoin','doge':'dogecoin','avalanche':'avalanche-2','avax':'avalanche-2','polygon':'matic-network','matic':'matic-network','chainlink':'chainlink','link':'chainlink','litecoin':'litecoin','ltc':'litecoin' };
+function normalizeCryptoName(name) {
+  var key = name.toLowerCase().trim();
+  if (COINGECKO_CRYPTO_MAP[key]) return COINGECKO_CRYPTO_MAP[key];
+  for (var k in COINGECKO_CRYPTO_MAP) if (key.includes(k) || k.includes(key)) return COINGECKO_CRYPTO_MAP[k];
+  return key.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+function fetchCryptoPrice(coinName, index, callback) {
+  var coinId = normalizeCryptoName(coinName);
+  var url = 'https://api.coingecko.com/api/v3/simple/price?ids=' + encodeURIComponent(coinId) + '&vs_currencies=eur';
+  fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+    if (data && data[coinId] && data[coinId].eur !== undefined) {
+      var price = data[coinId].eur;
+      if (DATA.crypto[index]) {
+        DATA.crypto[index].price = '€' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+        var amt = parseFloat(DATA.crypto[index].amount) || 0;
+        DATA.crypto[index].value = '€' + (price * amt).toLocaleString('en-US', { minimumFractionDigits: 2 });
+        DATA.crypto[index].status = 'Live €' + price.toLocaleString('en-US', { minimumFractionDigits: 2 });
+      }
+      renderCrypto(); updateOverview(); saveToServer();
+      if (callback) callback();
+    } else { searchCoinGecko(coinName, index, callback); }
+  }).catch(function(err) { if (DATA.crypto[index]) DATA.crypto[index].status = 'API error'; renderCrypto(); if (callback) callback(); });
+}
+function searchCoinGecko(coinName, index, callback) {
+  fetch('https://api.coingecko.com/api/v3/search?query=' + encodeURIComponent(coinName)).then(function(r) { return r.json(); }).then(function(data) {
+    if (data && data.coins && data.coins.length > 0) {
+      var best = data.coins[0]; var foundId = best.id;
+      if (DATA.crypto[index]) { DATA.crypto[index].name = best.name + ' (' + foundId + ')'; DATA.crypto[index].status = 'Found as ' + foundId + ', fetching...'; }
+      renderCrypto(); fetchCryptoPrice(foundId, index, callback);
+    } else { if (DATA.crypto[index]) DATA.crypto[index].status = 'Coin not found on CoinGecko'; renderCrypto(); if (callback) callback(); }
+  }).catch(function(err) { if (DATA.crypto[index]) DATA.crypto[index].status = 'Search failed'; renderCrypto(); if (callback) callback(); });
+}
+function refreshCryptoPrices() {
+  setSyncStatus('sync-ok', 'Fetching all prices...');
+  var cryptos = DATA.crypto;
+  if (cryptos.length === 0) { showToast('No cryptocurrencies in your portfolio', true); return; }
+  var completed = 0;
+  cryptos.forEach(function(c, i) { c.status = 'Fetching...'; fetchCryptoPrice(c.name, i, function() { completed++; if (completed === cryptos.length) { setSyncStatus('sync-ok', 'All prices updated'); showToast('All crypto prices refreshed!'); } }); });
+  renderCrypto();
+}
+var CURRENCY_CODE_MAP = { 'usd':'USD','dollar':'USD','eur':'EUR','euro':'EUR','gbp':'GBP','pound':'GBP','jpy':'JPY','yen':'JPY','chf':'CHF','cad':'CAD','aud':'AUD','cny':'CNY' };
+function normalizeCurrencyCode(name) {
+  var key = name.toLowerCase().trim();
+  if (CURRENCY_CODE_MAP[key]) return CURRENCY_CODE_MAP[key];
+  if (/^[A-Za-z]{3}$/.test(key)) return key.toUpperCase();
+  for (var k in CURRENCY_CODE_MAP) if (key.includes(k) || k.includes(key)) return CURRENCY_CODE_MAP[k];
+  return key.toUpperCase();
+}
+function fetchCurrencyRate(currName, index, callback) {
+  var code = normalizeCurrencyCode(currName);
+  if (code === 'EUR') {
+    if (DATA.currencies[index]) { var amt = parseFloat(DATA.currencies[index].amount) || 0; DATA.currencies[index].value = '€' + amt.toLocaleString('en-US', { minimumFractionDigits: 2 }); DATA.currencies[index].status = 'Same as EUR'; }
+    renderCurrencies(); updateOverview(); saveToServer(); if (callback) callback(); return;
+  }
+  fetch('https://api.exchangerate-api.com/v4/latest/' + code).then(function(r) { return r.json(); }).then(function(data) {
+    if (data && data.rates && data.rates.EUR) {
+      var rate = data.rates.EUR;
+      if (DATA.currencies[index]) { var amt = parseFloat(DATA.currencies[index].amount) || 0; var eurValue = amt * rate; DATA.currencies[index].value = '€' + eurValue.toLocaleString('en-US', { minimumFractionDigits: 2 }); DATA.currencies[index].rate = rate; DATA.currencies[index].status = '1 ' + code + ' = €' + rate.toLocaleString('en-US', { minimumFractionDigits: 4 }); }
+      renderCurrencies(); updateOverview(); saveToServer(); if (callback) callback();
+    } else { fetchFrankfurter(code, index, callback); }
+  }).catch(function() { fetchFrankfurter(code, index, callback); });
+}
+function fetchFrankfurter(code, index, callback) {
+  fetch('https://api.frankfurter.app/latest?from=' + code + '&to=EUR').then(function(r) { return r.json(); }).then(function(data) {
+    if (data && data.rates && data.rates.EUR) {
+      var rate = data.rates.EUR;
+      if (DATA.currencies[index]) { var amt = parseFloat(DATA.currencies[index].amount) || 0; var eurValue = amt * rate; DATA.currencies[index].value = '€' + eurValue.toLocaleString('en-US', { minimumFractionDigits: 2 }); DATA.currencies[index].rate = rate; DATA.currencies[index].status = '1 ' + code + ' = €' + rate.toLocaleString('en-US', { minimumFractionDigits: 4 }); }
+      renderCurrencies(); updateOverview(); saveToServer(); if (callback) callback();
+    } else { if (DATA.currencies[index]) DATA.currencies[index].status = 'Rate not found for ' + code; renderCurrencies(); if (callback) callback(); }
+  }).catch(function() { if (DATA.currencies[index]) DATA.currencies[index].status = 'API error'; renderCurrencies(); if (callback) callback(); });
+}
+function refreshCurrencyRates() {
+  var currencies = DATA.currencies;
+  if (currencies.length === 0) { showToast('No currencies in your list', true); return; }
+  var completed = 0;
+  currencies.forEach(function(c, i) { c.status = 'Fetching...'; fetchCurrencyRate(c.name, i, function() { completed++; if (completed === currencies.length) showToast('All currency rates refreshed!'); }); });
+  renderCurrencies();
+}
 
 // ================== LIVE SYNC ENGINE ==================
 var _lastSyncHash = '', _syncInterval = null, _syncInProgress = false;
 function _computeDataHash(d) {
   var s = JSON.stringify({cards:d.cards, cash:d.cash, crypto:d.crypto, currencies:d.currencies, transactions:d.transactions});
-  var h = 0;
-  for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); h = ((h << 5) - h) + c; h = h & h; }
-  return 'h' + h;
+  var h = 0; for (var i=0;i<s.length;i++) { var c = s.charCodeAt(i); h = ((h<<5)-h)+c; h = h&h; }
+  return 'h'+h;
 }
 function liveSync() {
   if (_syncInProgress) return;
@@ -725,10 +1162,7 @@ function liveSync() {
     var payload = JSON.parse(JSON.stringify(DATA));
     payload.last_updated = new Date().toISOString();
     db.ref('users/' + user).set(payload).then(function() {
-      _lastSyncHash = currentHash;
-      syncLocalStorageWithData();
-      setSyncStatus('sync-ok', 'Synced ✓');
-      _syncInProgress = false;
+      _lastSyncHash = currentHash; syncLocalStorageWithData(); setSyncStatus('sync-ok', 'Synced ✓'); _syncInProgress = false;
     }).catch(function() { setSyncStatus('sync-error', 'Firebase offline'); _syncInProgress = false; });
   } else {
     db.ref('users/' + user).once('value').then(function(snapshot) {
@@ -736,44 +1170,25 @@ function liveSync() {
       if (fbData) {
         var serverHash = _computeDataHash(fbData);
         if (serverHash !== _lastSyncHash) {
-          DATA = ensureDataStructure(fbData);
-          _lastSyncHash = serverHash;
-          syncLocalStorageWithData();
-          renderAll(); updateCharts();
-          setSyncStatus('sync-ok', 'Updated from Firebase ✓');
+          DATA = ensureDataStructure(fbData); _lastSyncHash = serverHash; syncLocalStorageWithData(); renderAll(); updateCharts(); setSyncStatus('sync-ok', 'Updated from Firebase ✓');
         } else setSyncStatus('sync-ok', 'In sync ✓');
       }
       _syncInProgress = false;
     }).catch(function() { _syncInProgress = false; });
   }
 }
-function startLiveSync() {
-  if (_syncInterval) clearInterval(_syncInterval);
-  _lastSyncHash = _computeDataHash(DATA);
-  _syncInterval = setInterval(liveSync, 3000);
-  setTimeout(liveSync, 500);
-}
+function startLiveSync() { if (_syncInterval) clearInterval(_syncInterval); _lastSyncHash = _computeDataHash(DATA); _syncInterval = setInterval(liveSync, 3000); setTimeout(liveSync, 500); }
 function stopLiveSync() { if (_syncInterval) { clearInterval(_syncInterval); _syncInterval = null; } }
 function saveToServer(updateData) {
   var user = getCurrentUser();
   if (!user) { setSyncStatus('sync-error', 'Not logged in'); return; }
-  var payload = JSON.parse(JSON.stringify(DATA));
-  payload.last_updated = new Date().toISOString();
+  var payload = JSON.parse(JSON.stringify(DATA)); payload.last_updated = new Date().toISOString();
   db.ref('users/' + user).set(payload).then(function() {
-    setSyncStatus('sync-ok', 'Saved to Firebase');
-    document.getElementById('last-updated').textContent = payload.last_updated;
-    _lastSyncHash = _computeDataHash(DATA);
-    syncLocalStorageWithData();
-    if (updateData) { renderAll(); updateCharts(); }
+    setSyncStatus('sync-ok', 'Saved to Firebase'); document.getElementById('last-updated').textContent = payload.last_updated; _lastSyncHash = _computeDataHash(DATA); syncLocalStorageWithData(); if (updateData) { renderAll(); updateCharts(); }
   }).catch(function(err) { setSyncStatus('sync-error', 'Firebase save failed'); console.error(err); });
 }
-function syncLocalStorageWithData() {
-  try { var clean = JSON.parse(JSON.stringify(DATA)); delete clean.last_updated; localStorage.setItem('financeData_' + getCurrentUser(), JSON.stringify(clean)); } catch(e) {}
-}
-function getLocalData() {
-  try { var raw = localStorage.getItem('financeData_' + getCurrentUser()); if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') return parsed; } } catch(e) {}
-  return null;
-}
+function syncLocalStorageWithData() { try { var clean = JSON.parse(JSON.stringify(DATA)); delete clean.last_updated; localStorage.setItem('financeData_' + getCurrentUser(), JSON.stringify(clean)); } catch(e) {} }
+function getLocalData() { try { var raw = localStorage.getItem('financeData_' + getCurrentUser()); if (raw) { var parsed = JSON.parse(raw); if (parsed && typeof parsed === 'object') return parsed; } } catch(e) { return null; } }
 function forceReloadFromServer() {
   var user = getCurrentUser();
   if (!user) { setSyncStatus('sync-error', 'Not logged in'); return; }
@@ -781,115 +1196,50 @@ function forceReloadFromServer() {
   db.ref('users/' + user).once('value').then(function(snapshot) {
     var fbData = snapshot.val();
     if (fbData) {
-      DATA = ensureDataStructure(fbData);
-      _lastSyncHash = _computeDataHash(DATA);
-      syncLocalStorageWithData();
-      renderAll(); updateCharts();
+      DATA = ensureDataStructure(fbData); _lastSyncHash = _computeDataHash(DATA); syncLocalStorageWithData(); renderAll(); updateCharts();
       if (fbData.last_updated) document.getElementById('last-updated').textContent = 'Last updated: ' + fbData.last_updated;
-      setSyncStatus('sync-ok', 'Reloaded from Firebase ✓');
-      showToast('Data reloaded from Firebase');
+      setSyncStatus('sync-ok', 'Reloaded from Firebase ✓'); showToast('Data reloaded from Firebase');
     } else { setSyncStatus('sync-error', 'No data in Firebase'); showToast('No data found in Firebase', true); }
   }).catch(function(err) { setSyncStatus('sync-error', 'Firebase offline'); showToast('Firebase unreachable', true); console.error(err); });
 }
 function init() {
   var user = getCurrentUser();
-  if (!user) {
-    var local = getLocalData();
-    if (local) DATA = ensureDataStructure(local);
-    renderAll(); updateCharts(); startLiveSync();
-    return;
-  }
+  if (!user) { var local = getLocalData(); if (local) DATA = ensureDataStructure(local); renderAll(); updateCharts(); startLiveSync(); return; }
   db.ref('users/' + user).once('value').then(function(snapshot) {
     var fbData = snapshot.val();
-    if (fbData) {
-      DATA = ensureDataStructure(fbData);
-      syncLocalStorageWithData();
-      if (fbData.last_updated) document.getElementById('last-updated').textContent = 'Last updated: ' + fbData.last_updated;
-      setSyncStatus('sync-ok', 'Loaded from Firebase');
-    } else {
-      var local = getLocalData();
-      if (local) DATA = ensureDataStructure(local);
-      saveToServer(false);
-    }
+    if (fbData) { DATA = ensureDataStructure(fbData); syncLocalStorageWithData(); if (fbData.last_updated) document.getElementById('last-updated').textContent = 'Last updated: ' + fbData.last_updated; setSyncStatus('sync-ok', 'Loaded from Firebase'); }
+    else { var local = getLocalData(); if (local) DATA = ensureDataStructure(local); saveToServer(false); }
     renderAll(); updateCharts(); startLiveSync();
-  }).catch(function(err) {
-    console.error('Firebase load error:', err);
-    var local = getLocalData();
-    if (local) DATA = ensureDataStructure(local);
-    renderAll(); updateCharts(); setSyncStatus('sync-error', 'Firebase offline');
-    startLiveSync();
-  });
+  }).catch(function(err) { console.error('Firebase load error:', err); var local = getLocalData(); if (local) DATA = ensureDataStructure(local); renderAll(); updateCharts(); setSyncStatus('sync-error', 'Firebase offline'); startLiveSync(); });
 }
+
+// ================== MONTHLY SNAPSHOTS ==================
 function getMonthlySnapshots() { try { var raw = localStorage.getItem('monthlySnapshots'); return raw ? JSON.parse(raw) : []; } catch(e) { return []; } }
 function saveMonthlySnapshots(s) { try { localStorage.setItem('monthlySnapshots', JSON.stringify(s)); } catch(e) {} }
 function saveMonthlySnapshot() {
-  var key = getCurrentMonthKey();
-  var snaps = getMonthlySnapshots();
-  var idx = snaps.findIndex(function(s) { return s.key === key; });
+  var key = getCurrentMonthKey(); var snaps = getMonthlySnapshots(); var idx = snaps.findIndex(function(s) { return s.key === key; });
   var expCats = {}, incCats = {};
   DATA.transactions.forEach(function(t) {
     var amt = parseFloat(t.amount) || 0;
-    if (amt < 0 || t.type === 'expense' || t.type === 'transfer_out') {
-      var cat = t.category || 'Other'; expCats[cat] = (expCats[cat] || 0) + Math.abs(amt);
-    } else if (amt > 0 || t.type === 'income' || t.type === 'transfer_in') {
-      var cat = t.category || 'Other'; incCats[cat] = (incCats[cat] || 0) + Math.abs(amt);
-    }
+    if (amt < 0 || t.type === 'expense' || t.type === 'transfer_out') { var cat = t.category || 'Other'; expCats[cat] = (expCats[cat] || 0) + Math.abs(amt); }
+    else if (amt > 0 || t.type === 'income' || t.type === 'transfer_in') { var cat = t.category || 'Other'; incCats[cat] = (incCats[cat] || 0) + Math.abs(amt); }
   });
-  var snap = {
-    key: key, label: getMonthLabel(key), savedAt: new Date().toISOString(),
-    expenseCategories: expCats, incomeCategories: incCats,
-    totalExpenses: Object.values(expCats).reduce(function(a,b){return a+b;},0),
-    totalIncome: Object.values(incCats).reduce(function(a,b){return a+b;},0)
-  };
+  var snap = { key: key, label: getMonthLabel(key), savedAt: new Date().toISOString(), expenseCategories: expCats, incomeCategories: incCats, totalExpenses: Object.values(expCats).reduce(function(a,b){return a+b;},0), totalIncome: Object.values(incCats).reduce(function(a,b){return a+b;},0) };
   if (idx >= 0) snaps[idx] = snap; else snaps.push(snap);
-  saveMonthlySnapshots(snaps);
-  renderMonthlySnapshots();
-  showToast('Snapshot saved for ' + snap.label);
+  saveMonthlySnapshots(snaps); renderMonthlySnapshots(); showToast('Snapshot saved for ' + snap.label);
 }
-async function clearMonthlyData() {
-  var confirmed = await showModal('Reset Month', 'Reset all transactions and start a new month? Current state will be saved first.');
-  if (!confirmed) return;
-  saveMonthlySnapshot();
-  DATA.transactions = [];
-  saveToServer(); saveToLocalStorage();
-  renderAll(); updateCharts();
-  showToast('Month reset! Transactions cleared. Snapshot saved.');
-}
+async function clearMonthlyData() { var confirmed = await showModal('Reset Month', 'Reset all transactions and start a new month? Current state will be saved first.'); if (!confirmed) return; saveMonthlySnapshot(); DATA.transactions = []; saveToServer(); saveToLocalStorage(); renderAll(); updateCharts(); showToast('Month reset! Transactions cleared. Snapshot saved.'); }
 function renderMonthlySnapshots() {
-  var c = document.getElementById('monthly-snapshots-container');
-  if (!c) return;
-  var snaps = getMonthlySnapshots();
-  if (snaps.length === 0) {
-    c.innerHTML = '<div style="text-align:center;color:#666;padding:40px;background:#1a1a2e;border-radius:12px;border:1px solid #2a2a4a;"><p style="font-size:1.2rem;margin-bottom:8px;">No monthly snapshots yet</p><p style="font-size:0.85rem;">Click "Save Current Month" at month-end to store your financial overview.</p></div>';
-    return;
-  }
+  var c = document.getElementById('monthly-snapshots-container'); if (!c) return; var snaps = getMonthlySnapshots();
+  if (snaps.length === 0) { c.innerHTML = '<div style="text-align:center;color:#666;padding:40px;background:#1a1a2e;border-radius:12px;border:1px solid #2a2a4a;"><p style="font-size:1.2rem;margin-bottom:8px;">No monthly snapshots yet</p><p style="font-size:0.85rem;">Click "Save Current Month" at month-end to store your financial overview.</p></div>'; return; }
   var html = '';
   snaps.slice().reverse().forEach(function(s) {
-    html += '<div style="background:#1a1a2e;border-radius:12px;padding:16px;border:1px solid #2a2a4a;margin-bottom:12px;">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">';
-    html += '<h3 style="color:#a855f7;font-size:1.1rem;">' + escapeHtml(s.label) + '</h3>';
-    html += '<span style="color:#666;font-size:0.8rem;">Saved: ' + new Date(s.savedAt).toLocaleString() + '</span>';
-    html += '</div>';
-    html += '<div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;">';
-    html += '<div style="background:#16213e;padding:8px 14px;border-radius:8px;"><span style="color:#22c55e;">Income:</span> <strong style="color:#fff;">€' + (s.totalIncome||0).toFixed(2) + '</strong></div>';
-    html += '<div style="background:#16213e;padding:8px 14px;border-radius:8px;"><span style="color:#ef4444;">Expenses:</span> <strong style="color:#fff;">€' + (s.totalExpenses||0).toFixed(2) + '</strong></div>';
-    var net = (s.totalIncome||0) - (s.totalExpenses||0);
-    html += '<div style="background:#16213e;padding:8px 14px;border-radius:8px;"><span style="color:' + (net>=0?'#22c55e':'#ef4444') + ';">Net:</span> <strong style="color:#fff;">€' + net.toFixed(2) + '</strong></div>';
-    html += '</div>';
+    html += '<div style="background:#1a1a2e;border-radius:12px;padding:16px;border:1px solid #2a2a4a;margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><h3 style="color:#a855f7;font-size:1.1rem;">' + escapeHtml(s.label) + '</h3><span style="color:#666;font-size:0.8rem;">Saved: ' + new Date(s.savedAt).toLocaleString() + '</span></div><div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;"><div style="background:#16213e;padding:8px 14px;border-radius:8px;"><span style="color:#22c55e;">Income:</span> <strong style="color:#fff;">€' + (s.totalIncome||0).toFixed(2) + '</strong></div><div style="background:#16213e;padding:8px 14px;border-radius:8px;"><span style="color:#ef4444;">Expenses:</span> <strong style="color:#fff;">€' + (s.totalExpenses||0).toFixed(2) + '</strong></div><div style="background:#16213e;padding:8px 14px;border-radius:8px;"><span style="color:' + ((s.totalIncome||0)-(s.totalExpenses||0)>=0?'#22c55e':'#ef4444') + ';">Net:</span> <strong style="color:#fff;">€' + ((s.totalIncome||0)-(s.totalExpenses||0)).toFixed(2) + '</strong></div></div>';
     var ek = Object.keys(s.expenseCategories||{});
-    if (ek.length) {
-      html += '<div style="margin-bottom:8px;"><span style="color:#ef4444;font-size:0.85rem;">Expenses:</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
-      ek.forEach(function(cat){ html += '<span style="background:#2a1a1a;padding:4px 10px;border-radius:6px;font-size:0.8rem;border:1px solid #3a2020;">' + escapeHtml(cat) + ': <strong style="color:#ef4444;">€' + s.expenseCategories[cat].toFixed(2) + '</strong></span>'; });
-      html += '</div>';
-    }
+    if (ek.length) { html += '<div style="margin-bottom:8px;"><span style="color:#ef4444;font-size:0.85rem;">Expenses:</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">'; ek.forEach(function(cat){ html += '<span style="background:#2a1a1a;padding:4px 10px;border-radius:6px;font-size:0.8rem;border:1px solid #3a2020;">' + escapeHtml(cat) + ': <strong style="color:#ef4444;">€' + s.expenseCategories[cat].toFixed(2) + '</strong></span>'; }); html += '</div>'; }
     var ik = Object.keys(s.incomeCategories||{});
-    if (ik.length) {
-      html += '<div style="margin-bottom:8px;"><span style="color:#22c55e;font-size:0.85rem;">Income:</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
-      ik.forEach(function(cat){ html += '<span style="background:#1a2a1a;padding:4px 10px;border-radius:6px;font-size:0.8rem;border:1px solid #203a20;">' + escapeHtml(cat) + ': <strong style="color:#22c55e;">€' + s.incomeCategories[cat].toFixed(2) + '</strong></span>'; });
-      html += '</div>';
-    }
-    html += '<div style="margin-top:12px;text-align:right;"><button class="btn-remove-tx" onclick="deleteMonthlySnapshot(\'' + s.key + '\')">Delete</button></div>';
-    html += '</div>';
+    if (ik.length) { html += '<div style="margin-bottom:8px;"><span style="color:#22c55e;font-size:0.85rem;">Income:</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;">'; ik.forEach(function(cat){ html += '<span style="background:#1a2a1a;padding:4px 10px;border-radius:6px;font-size:0.8rem;border:1px solid #203a20;">' + escapeHtml(cat) + ': <strong style="color:#22c55e;">€' + s.incomeCategories[cat].toFixed(2) + '</strong></span>'; }); html += '</div>'; }
+    html += '<div style="margin-top:12px;text-align:right;"><button class="btn-remove-tx" onclick="deleteMonthlySnapshot(\'' + s.key + '\')">Delete</button></div></div>';
   });
   c.innerHTML = html;
 }
@@ -904,61 +1254,36 @@ function showModal(title, message, showInput, inputLabel, inputPlaceholder) {
     _modalResolve = resolve;
     document.getElementById('modalTitle').textContent = title || 'Confirm';
     document.getElementById('modalMessage').textContent = message || '';
-    var inputGroup = document.getElementById('modalInputGroup');
-    var input = document.getElementById('modalInput');
-    if (showInput) {
-      inputGroup.style.display = 'block';
-      document.getElementById('modalInputLabel').textContent = inputLabel || 'Enter value';
-      input.placeholder = inputPlaceholder || '';
-      input.value = '';
-      input.focus();
-    } else { inputGroup.style.display = 'none'; }
+    var inputGroup = document.getElementById('modalInputGroup'); var input = document.getElementById('modalInput');
+    if (showInput) { inputGroup.style.display = 'block'; document.getElementById('modalInputLabel').textContent = inputLabel || 'Enter value'; input.placeholder = inputPlaceholder || ''; input.value = ''; input.focus(); }
+    else { inputGroup.style.display = 'none'; }
     document.getElementById('customModal').style.display = 'flex';
   });
 }
-function modalConfirm() {
-  var inputGroup = document.getElementById('modalInputGroup');
-  var input = document.getElementById('modalInput');
-  var result = inputGroup.style.display !== 'none' ? input.value.trim() : true;
-  document.getElementById('customModal').style.display = 'none';
-  if (_modalResolve) { _modalResolve(result); _modalResolve = null; }
-}
-function modalCancel() {
-  document.getElementById('customModal').style.display = 'none';
-  if (_modalResolve) { _modalResolve(null); _modalResolve = null; }
-}
+function modalConfirm() { var inputGroup = document.getElementById('modalInputGroup'); var input = document.getElementById('modalInput'); var result = inputGroup.style.display !== 'none' ? input.value.trim() : true; document.getElementById('customModal').style.display = 'none'; if (_modalResolve) { _modalResolve(result); _modalResolve = null; } }
+function modalCancel() { document.getElementById('customModal').style.display = 'none'; if (_modalResolve) { _modalResolve(null); _modalResolve = null; } }
 
 // ================== STARTUP ==================
 document.addEventListener('DOMContentLoaded', function() {
-  // Wire up modal buttons
-  var confirmBtn = document.getElementById('modalConfirmBtn');
-  var cancelBtn = document.getElementById('modalCancelBtn');
-  var modalInput = document.getElementById('modalInput');
+  var confirmBtn = document.getElementById('modalConfirmBtn'); var cancelBtn = document.getElementById('modalCancelBtn'); var modalInput = document.getElementById('modalInput');
   if (confirmBtn) confirmBtn.addEventListener('click', modalConfirm);
   if (cancelBtn) cancelBtn.addEventListener('click', modalCancel);
   if (modalInput) modalInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') modalConfirm(); if (e.key === 'Escape') modalCancel(); });
-
-  // Category change listener for custom field
+  
+  // Category change listener for custom category field
   var catSelect = document.getElementById('tx-category');
   if (catSelect) {
     catSelect.addEventListener('change', function() {
       var val = this.value;
       var customGroup = document.getElementById('customCategoryGroup');
       if (customGroup) {
-        if (val === 'Other' || val === 'Other Income') {
-          customGroup.style.display = 'block';
-        } else {
-          customGroup.style.display = 'none';
-          var customInput = document.getElementById('customCategory');
-          if (customInput) customInput.value = '';
-        }
+        if (val === 'Other' || val === 'Other Income') { customGroup.style.display = 'block'; }
+        else { customGroup.style.display = 'none'; document.getElementById('customCategory').value = ''; }
       }
     });
-    // trigger once to set initial visibility
     catSelect.dispatchEvent(new Event('change'));
   }
-
-  // Auto-login
+  
   if (!checkLogin()) attemptAutoLogin();
 });
 window.addEventListener('resize', function() { if (window.updateCharts) { let rt; clearTimeout(rt); rt = setTimeout(() => updateCharts(), 150); } });
@@ -1049,7 +1374,7 @@ window.addEventListener('resize', function() { if (window.updateCharts) { let rt
       <div class="chart-box"><h3 class="green">Income Pie</h3><canvas id="incomePieChart" height="100" style="max-width:100%; height:auto;"></canvas></div>
     </div>
   </div>
-  <!-- Transactions Tab with custom category field -->
+  <!-- Transactions Tab (with custom category field) -->
   <div id="tab-transactions" class="tab-content">
     <div class="section-title"><span class="dot" style="background:#36A2EB;"></span> Add Transaction</div>
     <div style="max-width:500px;margin-bottom:30px;">
