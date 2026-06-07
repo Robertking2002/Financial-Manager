@@ -566,21 +566,49 @@ function updateMethodOptions() {
   DATA.cash.forEach(function(c){ var o = document.createElement('option'); o.value = 'cash|' + c.name; o.text = 'Cash: ' + c.name; sel.appendChild(o); });
   DATA.currencies.forEach(function(c){ var o = document.createElement('option'); o.value = 'currency|' + c.name; o.text = 'Currency: ' + c.name; sel.appendChild(o); });
 }
+var lastType = null;
+
 function updateQuickForm() {
   var type = document.getElementById('tx-type').value;
   var catSel = document.getElementById('tx-category');
   if (!catSel) return;
-  catSel.innerHTML = '';
-  var cats = type === 'income' 
+  
+  // If the type hasn't changed, just update the custom field visibility and exit
+  if (lastType === type) {
+    var selected = catSel.value;
+    var customGroup = document.getElementById('customCategoryGroup');
+    if (customGroup) {
+      if (selected === 'Other' || selected === 'Other Income') {
+        customGroup.style.display = 'block';
+      } else {
+        customGroup.style.display = 'none';
+      }
+    }
+    return;
+  }
+  
+  // Type changed – rebuild the dropdown
+  lastType = type;
+  var cats = type === 'income'
     ? ['Salary','Freelance','Gift','Investment','Refund','Transfer','Interest','Rental','Sale','Other Income']
     : ['Food','Transport','Shopping','Bills','Entertainment','Health','Education','Rent','Utilities','Insurance','Clothing','Electronics','Travel','Dining Out','Groceries','Subscriptions','Other'];
-  cats.forEach(function(c){ 
-    var o = document.createElement('option'); 
-    o.value = c; 
-    o.text = c; 
-    catSel.appendChild(o); 
+  
+  // Remember the currently selected value (if any) before clearing
+  var oldValue = catSel.value;
+  catSel.innerHTML = '';
+  cats.forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c;
+    o.text = c;
+    catSel.appendChild(o);
   });
-  // Show/hide custom category input based on selection
+  
+  // Restore the previous selection if it still exists in the new list
+  if (cats.indexOf(oldValue) !== -1) {
+    catSel.value = oldValue;
+  }
+  
+  // Show/hide custom category input based on the new selection
   var customGroup = document.getElementById('customCategoryGroup');
   var selected = catSel.value;
   if (customGroup) {
