@@ -748,6 +748,22 @@ function updateOverview() {
 
 var expensePieChart = null, incomePieChart = null;
 
+function ensureDataStructure(data) {
+  // If data is null/undefined, start fresh
+  if (!data || typeof data !== 'object') {
+    data = {};
+  }
+  // Guarantee all required arrays exist
+  if (!data.cards) data.cards = [];
+  if (!data.currencies) data.currencies = [];
+  if (!data.cash) data.cash = [];
+  if (!data.crypto) data.crypto = [];
+  if (!data.transactions) data.transactions = [];
+  if (!data.last_updated) data.last_updated = '';
+  return data;
+}
+
+  
 function updateCharts() {
   // Expense Pie
   var expCats = {};
@@ -1611,7 +1627,7 @@ function liveSync() {
           var serverHash = _computeDataHash(fbData);
           if (serverHash !== _lastSyncHash) {
             // Firebase has newer data — update local
-            DATA = fbData;
+            DATA = ensureDataStructure(fbData);
             _lastSyncHash = serverHash;
             syncLocalStorageWithData();
             renderAll();
@@ -2012,7 +2028,7 @@ function init() {
     .then(function(snapshot) {
       var fbData = snapshot.val();
       if (fbData) {
-        DATA = fbData;
+        DATA = ensureDataStructure(fbData);
         syncLocalStorageWithData();
         if (fbData.last_updated) {
           document.getElementById('last-updated').textContent = 'Last updated: ' + fbData.last_updated;
@@ -2059,7 +2075,7 @@ function forceReloadFromServer() {
     .then(function(snapshot) {
       var fbData = snapshot.val();
       if (fbData) {
-        DATA = fbData;
+        DATA = ensureDataStructure(fbData);
         _lastSyncHash = _computeDataHash(DATA);
         syncLocalStorageWithData();
         renderAll();
