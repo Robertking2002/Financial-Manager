@@ -159,7 +159,10 @@ tr:last-child td{border-bottom:none;}
 .snapshot-card .snap-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
 .snapshot-card .snap-tags span{font-size:0.7rem;padding:2px 7px;border-radius:4px;}
 .snapshot-card .snap-delete{text-align:right;}
-
+.chart-box canvas {
+  height: 160px !important;
+  width: 100% !important;
+}
 /* ===== BOTTOM SPACER ===== */
 .bottom-spacer{height:20px;}
 
@@ -784,7 +787,11 @@ function updateCharts() {
       labels: expLabels.length ? expLabels : ['No expenses'],
       datasets: [{ data: expData.length ? expData : [1], backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e','#36A2EB','#a855f7','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#06b6d4','#84cc16'] }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#888' } } } }
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#888' } } }
+    }
   });
 
   // Income Pie
@@ -806,7 +813,11 @@ function updateCharts() {
       labels: incLabels.length ? incLabels : ['No income'],
       datasets: [{ data: incData.length ? incData : [1], backgroundColor: ['#22c55e','#36A2EB','#a855f7','#f97316','#eab308','#ec4899','#14b8a6','#84cc16','#f43f5e','#8b5cf6','#06b6d4','#ef4444'] }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#888' } } } }
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#888' } } }
+    }
   });
 
   // Expense Bar
@@ -2019,6 +2030,14 @@ function init() {
     if (local) DATA = local;
     renderAll();
     updateCharts();
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+      // Debounce: wait 150ms after resize stops, then redraw charts
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(function() {
+        updateCharts();
+      }, 150);
+    });
     startLiveSync();
     return;
   }
