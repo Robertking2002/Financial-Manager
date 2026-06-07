@@ -554,9 +554,30 @@ function updateQuickForm() {
   var catSel = document.getElementById('tx-category');
   if (!catSel) return;
   catSel.innerHTML = '';
-  var cats = type === 'income' ? ['Salary','Freelance','Gift','Investment','Refund','Transfer','Interest','Rental','Sale','Other Income'] : ['Food','Transport','Shopping','Bills','Entertainment','Health','Education','Rent','Utilities','Insurance','Clothing','Electronics','Travel','Dining Out','Groceries','Subscriptions','Other'];
-  cats.forEach(function(c){ var o = document.createElement('option'); o.value = c; o.text = c; catSel.appendChild(o); });
+
+  var cats = type === 'income'
+    ? ['Salary', 'Freelance', 'Gift', 'Investment', 'Refund', 'Transfer', 'Interest', 'Rental', 'Sale', 'Other Income']
+    : ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Education', 'Rent', 'Utilities', 'Insurance', 'Clothing', 'Electronics', 'Travel', 'Dining Out', 'Groceries', 'Subscriptions', 'Other'];
+
+  cats.forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c;
+    o.text = c;
+    catSel.appendChild(o);
+  });
+
+  // Show/hide custom category input based on selection
+  var customGroup = document.getElementById('customCategoryGroup');
+  var selected = catSel.value;
+  if (selected === 'Other' || selected === 'Other Income') {
+    if (customGroup) customGroup.style.display = 'block';
+  } else {
+    if (customGroup) customGroup.style.display = 'none';
+    var customInput = document.getElementById('customCategory');
+    if (customInput) customInput.value = '';
+  }
 }
+  
 function populateTransferAccounts() {
   var fromSel = document.getElementById('transfer-from'), toSel = document.getElementById('transfer-to');
   if (!fromSel || !toSel) return;
@@ -615,56 +636,97 @@ function renderTransferHistory() {
 function addTransaction() {
   var type = document.getElementById('tx-type').value;
   var amount = parseFloat(document.getElementById('tx-amount').value);
-  var category = document.getElementById('tx-category').value;
+  var rawCategory = document.getElementById('tx-category').value;
+  var customCat = document.getElementById('customCategory').value.trim();
   var method = document.getElementById('tx-method').value;
   var desc = document.getElementById('tx-desc').value;
   var resultDiv = document.getElementById('tx-result');
-  if (!amount || amount <= 0) { resultDiv.innerHTML = '<span style="color:#ef4444;">Please enter a valid amount</span>'; return; }
+
+  if (!amount || amount <= 0) {
+    resultDiv.innerHTML = '<span style="color:#ef4444;">Please enter a valid amount</span>';
+    return;
+  }
+
+  // Use custom category if "Other" or "Other Income" is selected and custom field is not empty
+  var category = rawCategory;
+  if ((rawCategory === 'Other' || rawCategory === 'Other Income') && customCat !== '') {
+    category = customCat;
+  }
+
+  // Parse method
   var methodParts = method.split('|');
   var methodType = methodParts[0].toLowerCase();
   var methodName = methodParts.length >= 2 ? methodParts[1] : '';
+
+  // Find the account and update balance (same as your existing logic)
   var found = false;
   if (methodType === 'card') {
     for (var i = 0; i < DATA.cards.length; i++) {
       if (DATA.cards[i].name.toLowerCase() === methodName.toLowerCase()) {
         var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        if (type === 'income') DATA.cards[i].value = (curr + amount).toFixed(2) + ' EUR';
-        else {
-          if (curr < amount) { resultDiv.innerHTML = '<span style="color:#ef4444;">Insufficient funds</span>'; return; }
+        if (type === 'income') {
+          DATA.cards[i].value = (curr + amount).toFixed(2) + ' EUR';
+        } else {
+          if (curr < amount) {
+            resultDiv.innerHTML = '<span style="color:#ef4444;">Insufficient funds</span>';
+            return;
+          }
           DATA.cards[i].value = (curr - amount).toFixed(2) + ' EUR';
         }
-        found = true; break;
+        found = true;
+        break;
       }
     }
   } else if (methodType === 'cash') {
     for (var i = 0; i < DATA.cash.length; i++) {
       if (DATA.cash[i].name.toLowerCase() === methodName.toLowerCase()) {
         var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        if (type === 'income') DATA.cash[i].value = (curr + amount).toFixed(2) + ' EUR';
-        else {
-          if (curr < amount) { resultDiv.innerHTML = '<span style="color:#ef4444;">Insufficient funds</span>'; return; }
+        if (type === 'income') {
+          DATA.cash[i].value = (curr + amount).toFixed(2) + ' EUR';
+        } else {
+          if (curr < amount) {
+            resultDiv.innerHTML = '<span style="color:#ef4444;">Insufficient funds</span>';
+            return;
+          }
           DATA.cash[i].value = (curr - amount).toFixed(2) + ' EUR';
         }
-        found = true; break;
+        found = true;
+        break;
       }
     }
   }
-  if (!found) { resultDiv.innerHTML = '<span style="color:#ef4444;">Account not found: ' + escapeHtml(method) + '</span>'; return; }
+
+  if (!found) {
+    resultDiv.innerHTML = '<span style="color:#ef4444;">Account not found: ' + escapeHtml(method) + '</span>';
+    return;
+  }
+
+  // Add transaction record
   if (!DATA.transactions) DATA.transactions = [];
   var maxId = 0;
-  for (var i = 0; i < DATA.transactions.length; i++) if (DATA.transactions[i].id > maxId) maxId = DATA.transactions[i].id;
+  for (var i = 0; i < DATA.transactions.length; i++) {
+    if (DATA.transactions[i].id > maxId) maxId = DATA.transactions[i].id;
+  }
   DATA.transactions.push({
-    id: maxId + 1, type: type, amount: (type === 'income' ? '+' : '-') + amount.toFixed(2) + ' EUR',
-    method: method, category: category, description: desc || (type === 'income' ? 'Income' : 'Expense'), date: setTodayDate()
+    id: maxId + 1,
+    type: type,
+    amount: (type === 'income' ? '+' : '-') + amount.toFixed(2) + ' EUR',
+    method: method,
+    category: category,
+    description: desc || (type === 'income' ? 'Income' : 'Expense'),
+    date: setTodayDate()
   });
+
   resultDiv.innerHTML = '<span style="color:#4ade80;">Transaction added!</span>';
   _lastSyncHash = _computeDataHash(DATA);
   syncLocalStorageWithData();
   renderAll();
   document.getElementById('tx-amount').value = '';
   document.getElementById('tx-desc').value = '';
+  document.getElementById('customCategory').value = '';   // clear custom field
   saveToServer(false);
 }
+  
 function doTransfer() {
   var fromAcc = document.getElementById('transfer-from').value;
   var toAcc = document.getElementById('transfer-to').value;
@@ -1037,17 +1099,39 @@ function modalCancel() {
 
 // ================== STARTUP ==================
 document.addEventListener('DOMContentLoaded', function() {
+  // Wire up modal buttons
   var confirmBtn = document.getElementById('modalConfirmBtn');
   var cancelBtn = document.getElementById('modalCancelBtn');
   var modalInput = document.getElementById('modalInput');
   if (confirmBtn) confirmBtn.addEventListener('click', modalConfirm);
   if (cancelBtn) cancelBtn.addEventListener('click', modalCancel);
-  if (modalInput) modalInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') modalConfirm(); if (e.key === 'Escape') modalCancel(); });
-  // Try auto-login first; if not, show login screen
+  if (modalInput) modalInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') modalConfirm();
+    if (e.key === 'Escape') modalCancel();
+  });
+
+  // Category change listener for custom field
+  var catSelect = document.getElementById('tx-category');
+  if (catSelect) {
+    catSelect.addEventListener('change', function() {
+      var val = this.value;
+      var customGroup = document.getElementById('customCategoryGroup');
+      if (customGroup) {
+        if (val === 'Other' || val === 'Other Income') {
+          customGroup.style.display = 'block';
+        } else {
+          customGroup.style.display = 'none';
+          document.getElementById('customCategory').value = '';
+        }
+      }
+    });
+    // Trigger the change event once to set initial visibility
+    catSelect.dispatchEvent(new Event('change'));
+  }
+
+  // Auto-login
   if (!checkLogin()) attemptAutoLogin();
 });
-window.addEventListener('resize', function() { if (window.updateCharts) { let rt; clearTimeout(rt); rt = setTimeout(() => updateCharts(), 150); } });
-</script>
 
 <!-- ===== LOGIN SCREEN ===== -->
 <div class="login-overlay" id="loginOverlay">
@@ -1139,17 +1223,21 @@ window.addEventListener('resize', function() { if (window.updateCharts) { let rt
   </div>
   <!-- Transactions Tab -->
   <div id="tab-transactions" class="tab-content">
-    <div class="section-title"><span class="dot" style="background:#36A2EB;"></span> Add Transaction</div>
-    <div style="max-width:500px;margin-bottom:30px;">
-      <h3 style="font-size:1.1rem;font-weight:400;color:#fff;margin-bottom:12px;">Add Transaction</h3>
-      <div class="form-group"><label>Type</label><select id="tx-type" onchange="updateQuickForm()"><option value="expense">Expense</option><option value="income">Income</option></select></div>
-      <div class="form-group"><label>Amount (EUR)</label><input type="number" id="tx-amount" step="0.01" min="0" placeholder="0.00"></div>
-      <div class="form-group"><label>Category</label><select id="tx-category"></select></div>
-      <div class="form-group"><label>Account</label><select id="tx-method"></select></div>
-      <div class="form-group"><label>Description</label><input type="text" id="tx-desc" placeholder="e.g. groceries, salary"></div>
-      <button class="btn-submit" onclick="addTransaction()">Add Transaction</button>
-      <div id="tx-result" style="margin-top:8px;"></div>
-    </div>
+   <div class="section-title"><span class="dot" style="background:#36A2EB;"></span> Add Transaction</div>
+   <div style="max-width:500px;margin-bottom:30px;">
+     <h3 style="font-size:1.1rem;font-weight:400;color:#fff;margin-bottom:12px;">Add Transaction</h3>
+     <div class="form-group"><label>Type</label><select id="tx-type" onchange="updateQuickForm()"><option value="expense">Expense</option><option value="income">Income</option></select></div>
+     <div class="form-group"><label>Amount (EUR)</label><input type="number" id="tx-amount" step="0.01" min="0" placeholder="0.00"></div>
+     <div class="form-group"><label>Category</label><select id="tx-category"></select></div>
+     <div class="form-group" id="customCategoryGroup" style="display:none;">
+       <label>Custom Category Name (optional)</label>
+       <input type="text" id="customCategory" placeholder="e.g. Gifts, Repairs, etc.">
+     </div>
+     <div class="form-group"><label>Account</label><select id="tx-method"></select></div>
+     <div class="form-group"><label>Description</label><input type="text" id="tx-desc" placeholder="e.g. groceries, salary"></div>
+     <button class="btn-submit" onclick="addTransaction()">Add Transaction</button>
+     <div id="tx-result" style="margin-top:8px;"></div>
+   </div>
     <div class="section-title" style="margin-top:16px;"><span class="dot" style="background:#f97316;"></span> Transaction History</div>
     <h3 style="font-size:1.1rem;font-weight:400;color:#fff;margin-bottom:12px;">Transaction History</h3>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Type</th><th>Account</th><th>Description</th><th></th></tr></thead><tbody id="tx-tbody"></tbody></table></div>
