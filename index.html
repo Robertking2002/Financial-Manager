@@ -222,8 +222,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ================== GLOBAL DATA ==================
+// ================== GLOBAL VARIABLES ==================
 var DATA = { cards: [], currencies: [], cash: [], crypto: [], transactions: [], last_updated: '' };
+var isEditing = false;      // true when any inline edit is active
+var editingType = null;     // 'cards', 'cash', 'currencies', or 'crypto'
 
 // ================== HELPER FUNCTIONS ==================
 function escapeHtml(t) {
@@ -422,8 +424,8 @@ function attemptAutoLogin() {
       .then(function(snapshot) {
         var authData = snapshot.val();
         if (authData && authData.password === btoa(password)) {
-          localStorage.removeItem('finance_logged_in');
-          localStorage.removeItem('finance_user');
+          localStorage.setItem('finance_logged_in', 'true');
+          localStorage.setItem('finance_user', username);
           document.getElementById('loginOverlay').style.display = 'none';
           document.getElementById('appContainer').style.display = 'block';
           showToast('Welcome back, ' + username);
@@ -446,8 +448,9 @@ function attemptAutoLogin() {
   }
 }
 
-// ================== UI RENDER FUNCTIONS ==================
+// ================== UI RENDER FUNCTIONS (with edit protection) ==================
 function renderCards() {
+  if (isEditing && editingType === 'cards') return;
   var container = document.getElementById('cards-container');
   if (!container) return;
   var html = '';
@@ -461,6 +464,7 @@ function renderCards() {
   container.innerHTML = html;
 }
 function renderCash() {
+  if (isEditing && editingType === 'cash') return;
   var container = document.getElementById('cash-container');
   if (!container) return;
   var html = '';
@@ -474,6 +478,7 @@ function renderCash() {
   container.innerHTML = html;
 }
 function renderCrypto() {
+  if (isEditing && editingType === 'crypto') return;
   var container = document.getElementById('crypto-container');
   if (!container) return;
   var html = '';
@@ -490,6 +495,7 @@ function renderCrypto() {
   container.innerHTML = html;
 }
 function renderCurrencies() {
+  if (isEditing && editingType === 'currencies') return;
   var container = document.getElementById('currencies-container');
   if (!container) return;
   var html = '';
@@ -640,7 +646,7 @@ function renderTransactions() {
   var html = '';
   (DATA.transactions || []).slice().reverse().forEach(function(t) {
     var amount = parseFloat(t.amount) || 0, isIncome = amount >= 0;
-    html += '<table>';
+    html += '<tr>';
     html += '<td>' + escapeHtml(t.date||'') + '</td>';
     html += '<td>' + escapeHtml(t.category||'') + '</td>';
     html += '<td class="'+(isIncome?'income':'expense')+'">'+(isIncome?'€':'-€')+Math.abs(amount).toFixed(2)+'</td>';
@@ -875,9 +881,11 @@ function addCard() { DATA.cards.push({ name: 'New Card', value: '€0.00' }); re
 function addCashItem() { DATA.cash.push({ name: 'New Location', value: '€0.00' }); renderCash(); saveToServer(true); }
 async function removeAsset(type, index) { if (await showModal('Remove Item', 'Remove this item? This cannot be undone.')) { DATA[type].splice(index, 1); renderAll(); saveToServer(true); } }
 
-// ================== EDITING FUNCTIONS ==================
+// ================== EDITING FUNCTIONS (with edit flags) ==================
 function editValue(el) {
   if (el.querySelector('input')) return;
+  isEditing = true;
+  editingType = el.getAttribute('data-type');
   var current = el.innerText.trim();
   var input = document.createElement('input');
   input.type = 'text';
@@ -900,17 +908,26 @@ function editValue(el) {
     el.classList.remove('editing');
     gatherDataFromUI();
     updateOverview();
+    isEditing = false;
+    editingType = null;
     showToast('Saved');
     saveToServer(true);
   };
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') input.blur();
-    if (e.key === 'Escape') { el.innerText = current; el.classList.remove('editing'); }
+    if (e.key === 'Escape') {
+      el.innerText = current;
+      el.classList.remove('editing');
+      isEditing = false;
+      editingType = null;
+    }
   });
 }
 function editName(el) {
   if (el.querySelector('input')) return;
+  isEditing = true;
+  editingType = el.getAttribute('data-type');
   var current = el.innerText.trim();
   var input = document.createElement('input');
   input.type = 'text';
@@ -926,17 +943,25 @@ function editName(el) {
     el.innerText = newVal;
     gatherDataFromUI();
     saveToLocalStorage();
+    isEditing = false;
+    editingType = null;
     showToast('Renamed');
     saveToServer(true);
   };
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') input.blur();
-    if (e.key === 'Escape') el.innerText = current;
+    if (e.key === 'Escape') {
+      el.innerText = current;
+      isEditing = false;
+      editingType = null;
+    }
   });
 }
 function editCryptoAmount(el, index) {
   if (el.querySelector('input')) return;
+  isEditing = true;
+  editingType = 'crypto';
   var current = el.innerText.trim();
   var input = document.createElement('input');
   input.type = 'text';
@@ -958,17 +983,25 @@ function editCryptoAmount(el, index) {
     }
     renderCrypto();
     updateOverview();
+    isEditing = false;
+    editingType = null;
     showToast('Amount updated');
     saveToServer(true);
   };
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') input.blur();
-    if (e.key === 'Escape') el.innerText = current;
+    if (e.key === 'Escape') {
+      el.innerText = current;
+      isEditing = false;
+      editingType = null;
+    }
   });
 }
 function editCryptoName(el, index) {
   if (el.querySelector('input')) return;
+  isEditing = true;
+  editingType = 'crypto';
   var current = el.innerText.trim();
   var input = document.createElement('input');
   input.type = 'text';
@@ -988,17 +1021,25 @@ function editCryptoName(el, index) {
       fetchCryptoPrice(newVal, index);
     }
     renderCrypto();
+    isEditing = false;
+    editingType = null;
     showToast('Crypto renamed, fetching price...');
     saveToServer(true);
   };
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') input.blur();
-    if (e.key === 'Escape') el.innerText = current;
+    if (e.key === 'Escape') {
+      el.innerText = current;
+      isEditing = false;
+      editingType = null;
+    }
   });
 }
 function editCurrencyAmount(el, index) {
   if (el.querySelector('input')) return;
+  isEditing = true;
+  editingType = 'currencies';
   var current = el.innerText.trim();
   var input = document.createElement('input');
   input.type = 'text';
@@ -1022,13 +1063,19 @@ function editCurrencyAmount(el, index) {
     }
     renderCurrencies();
     updateOverview();
+    isEditing = false;
+    editingType = null;
     showToast('Amount updated');
     saveToServer(true);
   };
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') input.blur();
-    if (e.key === 'Escape') el.innerText = current;
+    if (e.key === 'Escape') {
+      el.innerText = current;
+      isEditing = false;
+      editingType = null;
+    }
   });
 }
 function gatherDataFromUI() {
