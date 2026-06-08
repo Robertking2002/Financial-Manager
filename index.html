@@ -399,7 +399,7 @@ function doRegister() {
     });
 }
 function checkLogin() {
-  if (sessionStorage.getItem('finance_logged_in') === 'true') {
+  if (localStorage.getItem('finance_logged_in') === 'true') {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('appContainer').style.display = 'block';
     return true;
@@ -1312,7 +1312,11 @@ document.addEventListener('DOMContentLoaded', function() {
     catSelect.dispatchEvent(new Event('change'));
   }
   
-  if (!checkLogin()) attemptAutoLogin();
+  if (!checkLogin()) {
+   attemptAutoLogin();
+ } else {
+   init();   // already logged in – load data from Firebase
+ }
 });
 window.addEventListener('resize', function() { if (window.updateCharts) { let rt; clearTimeout(rt); rt = setTimeout(() => updateCharts(), 150); } });
 </script>
