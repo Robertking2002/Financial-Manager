@@ -268,7 +268,7 @@ function setTodayDate() {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function getCurrentUser() {
-  return sessionStorage.getItem('finance_user') || 'default';
+  return localStorage.getItem('finance_user') || 'default';
 }
 function ensureDataStructure(data) {
   if (!data || typeof data !== 'object') data = {};
@@ -304,16 +304,16 @@ function completeLogin(username, password, remember) {
   } else {
     localStorage.removeItem('finance_remember');
   }
-  sessionStorage.setItem('finance_logged_in', 'true');
-  sessionStorage.setItem('finance_user', username);
+  localStorage.setItem('finance_logged_in', 'true');
+  localStorage.setItem('finance_user', username);
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('appContainer').style.display = 'block';
   showToast('Welcome back, ' + username + '!');
   init();
 }
 function logout() {
-  sessionStorage.removeItem('finance_logged_in');
-  sessionStorage.removeItem('finance_user');
+  localStorage.removeItem('finance_logged_in');
+  localStorage.removeItem('finance_user');
   document.getElementById('appContainer').style.display = 'none';
   document.getElementById('loginOverlay').style.display = 'flex';
   document.getElementById('loginUsername').value = '';
@@ -422,8 +422,8 @@ function attemptAutoLogin() {
       .then(function(snapshot) {
         var authData = snapshot.val();
         if (authData && authData.password === btoa(password)) {
-          sessionStorage.setItem('finance_logged_in', 'true');
-          sessionStorage.setItem('finance_user', username);
+          localStorage.removeItem('finance_logged_in');
+          localStorage.removeItem('finance_user');
           document.getElementById('loginOverlay').style.display = 'none';
           document.getElementById('appContainer').style.display = 'block';
           showToast('Welcome back, ' + username);
