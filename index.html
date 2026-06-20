@@ -608,120 +608,101 @@ function populateTransferAccounts() {
     var o2 = document.createElement('option'); o2.value = a.key; o2.text = a.label; toSel.appendChild(o2);
   });
 }
-function renderTransactions() {
-  var tbody = document.getElementById('tx-tbody');
-  if (!tbody) return;
-  var html = '';
-  (DATA.transactions || []).slice().reverse().forEach(function(t) {
-    var amount = parseFloat(t.amount) || 0, isIncome = amount >= 0;
-    html += '<tr>';
-    html += '<td>' + escapeHtml(t.date||'') + '</td>';
-    html += '<td>' + escapeHtml(t.category||'') + '</td>';
-    html += '<td class="'+(isIncome?'income':'expense')+'">'+(isIncome?'€':'-€')+Math.abs(amount).toFixed(2)+'</td>';
-    html += '<td><span class="badge '+(isIncome?'badge-income':'badge-expense')+'">'+(isIncome?'Income':'Expense')+'</span></td>';
-    var methodParts = (t.method || '').split('|');
-    var methodDisplay = t.method || '';
-    if (methodParts.length >= 3 && methodParts[0].toLowerCase() === 'card') methodDisplay = 'Card: ' + methodParts[1] + ' - ' + methodParts[2];
-    else if (methodParts.length >= 2 && methodParts[0].toLowerCase() === 'cash') methodDisplay = 'Cash: ' + methodParts[1];
-    else if (methodParts.length >= 2 && methodParts[0].toLowerCase() === 'currency') methodDisplay = 'Currency: ' + methodParts[1];
-    html += '<td>' + escapeHtml(methodDisplay) + '</td>';
-    html += '<td>' + escapeHtml(t.description||'') + '</td>';
-    html += '<td><button class="btn-remove-tx" onclick="removeTransaction('+t.id+')">X</button></td>';
-    html += '</tr>';
-  });
-  if (html === '') html = '<tr><td colspan="7" style="text-align:center;color:#666;padding:20px;">No transactions yet</td></tr>';
-  tbody.innerHTML = html;
-}
-function renderTransferHistory() {
-  var tbody = document.getElementById('transfer-tbody');
-  if (!tbody) return;
-  var html = '';
-  (DATA.transactions || []).slice().reverse().forEach(function(t) {
-    if (t.type !== 'transfer_out' && t.type !== 'transfer_in') return;
-    var amount = parseFloat(t.amount) || 0, isIn = t.type === 'transfer_in';
-    html += '<tr>';
-    html += '<td>' + escapeHtml(t.date||'') + '</td>';
-    html += '<td><span class="badge '+(isIn?'badge-income':'badge-expense')+'">'+(isIn?'In':'Out')+'</span></td>';
-    html += '<td class="'+(isIn?'income':'expense')+'">'+(isIn?'€':'-€')+Math.abs(amount).toFixed(2)+'</td>';
-    html += '<td>' + escapeHtml(t.description||'') + '</td>';
-    html += '<td><button class="btn-remove-tx" onclick="removeTransaction('+t.id+')">X</button></td>';
-    html += '</tr>';
-  });
-  if (html === '') html = '<tr><td colspan="5" style="text-align:center;color:#666;padding:20px;">No transfers yet</td></tr>';
-  tbody.innerHTML = html;
-}
+async function removeTransaction(id) {
+  var confirmed = await showModal('Remove Transaction', 'Remove this transaction and reverse the balance change?');
+  if (!confirmed) return;
 
-// ================== ADD TRANSACTION (handles all account types) ==================
-function addTransaction() {
-  var type = document.getElementById('tx-type').value;
-  var amount = parseFloat(document.getElementById('tx-amount').value);
-  var rawCategory = document.getElementById('tx-category').value;
-  var customCat = document.getElementById('customCategory').value.trim();
-  var method = document.getElementById('tx-method').value;
-  var desc = document.getElementById('tx-desc').value;
-  var resultDiv = document.getElementById('tx-result');
-  if (!amount || amount <= 0) { resultDiv.innerHTML = '<span style="color:#ef4444;">Please enter a valid amount</span>'; return; }
-
-  var category = rawCategory;
-  if ((rawCategory === 'Other' || rawCategory === 'Other Income') && customCat !== '') {
-    category = customCat;
-  }
-
-  var methodParts = method.split('|');
-  var methodType = methodParts[0].toLowerCase();
-  var methodName = methodParts.length >= 2 ? methodParts[1] : '';
-
-  var found = false;
-  var accountTypes = [
-    { key: 'card', arr: DATA.cards },
-    { key: 'cash', arr: DATA.cash },
-    { key: 'currency', arr: DATA.currencies },
-    { key: 'crypto', arr: DATA.crypto }
-  ];
-  for (var t = 0; t < accountTypes.length; t++) {
-    var typeInfo = accountTypes[t];
-    if (methodType === typeInfo.key) {
-      for (var i = 0; i < typeInfo.arr.length; i++) {
-        if (typeInfo.arr[i].name.toLowerCase() === methodName.toLowerCase()) {
-          var curr = parseFloat(String(typeInfo.arr[i].value).replace(/[€$£¥,]/g, '')) || 0;
-          if (type === 'expense') {
-            if (curr < amount) {
-              resultDiv.innerHTML = '<span style="color:#ef4444;">Insufficient funds</span>';
-              return;
-            }
-            typeInfo.arr[i].value = '€' + (curr - amount).toLocaleString('en-US', { minimumFractionDigits: 2 });
-          } else {
-            typeInfo.arr[i].value = '€' + (curr + amount).toLocaleString('en-US', { minimumFractionDigits: 2 });
-          }
-          found = true;
-          break;
-        }
-      }
-      if (found) break;
+  var txn = null;
+  for (var i = 0; i < DATA.transactions.length; i++) {
+    if (DATA.transactions[i].id === id) {
+      txn = DATA.transactions[i];
+      break;
     }
   }
-  if (!found) { resultDiv.innerHTML = '<span style="color:#ef4444;">Account not found: ' + escapeHtml(method) + '</span>'; return; }
+  if (!txn) {
+    showToast('Transaction not found');
+    return;
+  }
 
-  if (!DATA.transactions) DATA.transactions = [];
-  var maxId = 0;
-  for (var i = 0; i < DATA.transactions.length; i++) if (DATA.transactions[i].id > maxId) maxId = DATA.transactions[i].id;
-  DATA.transactions.push({
-    id: maxId + 1,
-    type: type,
-    amount: (type === 'income' ? '+' : '-') + amount.toFixed(2) + ' EUR',
-    method: method,
-    category: category,
-    description: desc || (type === 'income' ? 'Income' : 'Expense'),
-    date: setTodayDate()
-  });
-  resultDiv.innerHTML = '<span style="color:#4ade80;">Transaction added!</span>';
+  var amount = Math.abs(parseFloat(String(txn.amount).replace(/[^0-9.-]/g, '')) || 0);
+  var method = txn.method || '';
+  var txnType = txn.type || '';
+
+  // Helper: update account by delta (positive = add, negative = subtract)
+  function updateAccount(accountType, accountName, delta) {
+    var arr = DATA[accountType]; // e.g., DATA.cards, DATA.cash, DATA.currencies, DATA.crypto
+    if (!arr) return false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].name.toLowerCase() === accountName.toLowerCase()) {
+        var curr = parseFloat(arr[i].value.replace(/[€$£¥,]/g, '')) || 0;
+        var newVal = curr + delta;
+        arr[i].value = '€' + newVal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Map short type to DATA key
+  var typeMap = { 'card': 'cards', 'cash': 'cash', 'currency': 'currencies', 'crypto': 'crypto' };
+
+  if (txnType === 'expense') {
+    // Expense: we subtracted amount → add it back (delta = +amount)
+    var parts = method.split('|');
+    if (parts.length >= 2) {
+      var accType = parts[0].toLowerCase();
+      var accName = parts[1];
+      var dataKey = typeMap[accType];
+      if (dataKey) {
+        if (!updateAccount(dataKey, accName, amount)) {
+          showToast('Warning: account not found for reversal', true);
+        }
+      }
+    }
+  } else if (txnType === 'income') {
+    // Income: we added amount → subtract it (delta = -amount)
+    var parts = method.split('|');
+    if (parts.length >= 2) {
+      var accType = parts[0].toLowerCase();
+      var accName = parts[1];
+      var dataKey = typeMap[accType];
+      if (dataKey) {
+        if (!updateAccount(dataKey, accName, -amount)) {
+          showToast('Warning: account not found for reversal', true);
+        }
+      }
+    }
+  } else if (txnType === 'Transfer' || txnType === 'transfer' || method.indexOf('->') >= 0) {
+    // Transfer: format is "card|Name -> card|Name"
+    var transferParts = method.split('->');
+    if (transferParts.length === 2) {
+      var fromPart = transferParts[0].trim();
+      var toPart = transferParts[1].trim();
+      var fromParts = fromPart.split('|');
+      var toParts = toPart.split('|');
+      if (fromParts.length >= 2 && toParts.length >= 2) {
+        var fromType = fromParts[0].toLowerCase();
+        var fromName = fromParts[1];
+        var toType = toParts[0].toLowerCase();
+        var toName = toParts[1];
+        var fromKey = typeMap[fromType];
+        var toKey = typeMap[toType];
+        // Reverse: add back to source, subtract from destination
+        if (fromKey) updateAccount(fromKey, fromName, amount);
+        if (toKey) updateAccount(toKey, toName, -amount);
+      }
+    }
+  }
+
+  // Remove the transaction from DATA
+  DATA.transactions = DATA.transactions.filter(function(t) { return t.id !== id; });
+
   _lastSyncHash = _computeDataHash(DATA);
   syncLocalStorageWithData(getCurrentUid());
   renderAll();
-  document.getElementById('tx-amount').value = '';
-  document.getElementById('tx-desc').value = '';
-  document.getElementById('customCategory').value = '';
+  updateCharts();
   saveToServer(getCurrentUid(), false);
+  showToast('Transaction removed and balances reverted');
 }
 
 // ================== DO TRANSFER (handles all account types) ==================
