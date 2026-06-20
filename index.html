@@ -229,6 +229,10 @@ var DATA = { cards: [], currencies: [], cash: [], crypto: [], transactions: [], 
 var isEditing = false;
 var editingType = null;
 var currentUsername = '';
+var _saveInProgress = false;
+var _lastSyncHash = '';
+var _syncInterval = null;
+var _syncInProgress = false;
 
 // ================== HELPER FUNCTIONS ==================
 function escapeHtml(t) {
@@ -258,16 +262,22 @@ function switchTab(name) {
   if (menuBtn) menuBtn.classList.add('active');
   if (name === 'overview') { updateCharts(); }
 }
+window.switchTab = switchTab;
+
 function toggleMenu() {
   document.getElementById('sideMenu').classList.toggle('open');
   document.getElementById('sideOverlay').classList.toggle('show');
   document.getElementById('hamburgerBtn').classList.toggle('active');
 }
+window.toggleMenu = toggleMenu;
+
 function closeMenu() {
   document.getElementById('sideMenu').classList.remove('open');
   document.getElementById('sideOverlay').classList.remove('show');
   document.getElementById('hamburgerBtn').classList.remove('active');
 }
+window.closeMenu = closeMenu;
+
 function setTodayDate() {
   var d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -331,7 +341,7 @@ function doLogin() {
     .then(function() {
       return auth.signInWithEmailAndPassword(email, password);
     })
-    .then(function(userCredential) {
+    .then(function() {
       errorEl.style.display = 'none';
     })
     .catch(function(error) {
@@ -339,6 +349,7 @@ function doLogin() {
       errorEl.style.display = 'block';
     });
 }
+window.doLogin = doLogin;
 
 function doRegister() {
   var username = document.getElementById('regUsername').value.trim();
@@ -386,6 +397,7 @@ function doRegister() {
       errorEl.style.display = 'block';
     });
 }
+window.doRegister = doRegister;
 
 function logout() {
   auth.signOut().then(function() {
@@ -394,6 +406,7 @@ function logout() {
     console.error('Logout error:', error);
   });
 }
+window.logout = logout;
 
 // ================== DATA LOADING ==================
 function loadUserData(uid) {
@@ -466,9 +479,9 @@ function renderCrypto() {
     html += '<button class="remove-btn" onclick="removeAsset(\'crypto\',' + i + ')">X</button>';
     html += '<div class="name" style="cursor:pointer;" onclick="editCryptoName(this,' + i + ')">' + escapeHtml(c.name) + '</div>';
     html += '<div class="value" style="color:#f7931a;">' + escapeHtml(c.value) + '</div>';
-    html += '<div style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#f7931a;cursor:pointer;" onclick="editCryptoAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div>';
-    html += '<div style="font-size:0.75rem;color:#666;">Price: ' + escapeHtml(c.price || '€0.00') + '</div>';
-    if (c.status) html += '<div style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>';
+    html += '<div class="crypto-amount" style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#f7931a;cursor:pointer;" onclick="editCryptoAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div>';
+    html += '<div class="crypto-price" style="font-size:0.75rem;color:#666;">Price: ' + escapeHtml(c.price || '€0.00') + '</div>';
+    if (c.status) html += '<div class="crypto-status" style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>';
     html += '</div>';
   });
   container.innerHTML = html;
@@ -483,8 +496,9 @@ function renderCurrencies() {
     html += '<button class="remove-btn" onclick="removeAsset(\'currencies\',' + i + ')">X</button>';
     html += '<div class="name" onclick="editName(this)" data-index="' + i + '" data-type="currencies">' + escapeHtml(c.name) + '</div>';
     html += '<div class="value" onclick="editValue(this)" data-index="' + i + '" data-type="currencies">' + escapeHtml(c.value) + '</div>';
-    html += '<div style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#36A2EB;cursor:pointer;" onclick="editCurrencyAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div>';
-    if (c.status) html += '<div style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>';
+    html += '<div class="curr-amount" style="font-size:0.75rem;color:#666;margin-top:4px;">Amount: <strong style="color:#36A2EB;cursor:pointer;" onclick="editCurrencyAmount(this,' + i + ')">' + escapeHtml(c.amount || '0') + '</strong></div>';
+    html += '<div class="curr-rate" style="display:none;">' + escapeHtml(c.rate || '1') + '</div>';
+    if (c.status) html += '<div class="curr-status" style="font-size:0.7rem;color:#555;margin-top:4px;">' + escapeHtml(c.status) + '</div>';
     html += '</div>';
   });
   container.innerHTML = html;
@@ -504,6 +518,7 @@ var expensePieChart = null, incomePieChart = null;
 function updateCharts() {
   var expCats = {};
   DATA.transactions.forEach(function(t) {
+    if (t.type === 'transfer' || t.type === 'Transfer') return;
     var amt = parseFloat(t.amount) || 0;
     if (amt < 0 || t.type === 'expense' || t.type === 'transfer_out') {
       var cat = t.category || 'Other';
@@ -521,6 +536,7 @@ function updateCharts() {
   });
   var incCats = {};
   DATA.transactions.forEach(function(t) {
+    if (t.type === 'transfer' || t.type === 'Transfer') return;
     var amt = parseFloat(t.amount) || 0;
     if (amt > 0 || t.type === 'income' || t.type === 'transfer_in') {
       var cat = t.category || 'Other Income';
@@ -613,12 +629,18 @@ function renderTransactions() {
   if (!tbody) return;
   var html = '';
   (DATA.transactions || []).slice().reverse().forEach(function(t) {
-    var amount = parseFloat(t.amount) || 0, isIncome = amount >= 0;
+    var amount = parseFloat(t.amount) || 0;
+    var isTransfer = t.type === 'transfer' || t.type === 'Transfer';
+    var isIncome = amount >= 0 && !isTransfer;
     html += '<tr>';
     html += '<td>' + escapeHtml(t.date||'') + '</td>';
     html += '<td>' + escapeHtml(t.category||'') + '</td>';
     html += '<td class="'+(isIncome?'income':'expense')+'">'+(isIncome?'€':'-€')+Math.abs(amount).toFixed(2)+'</td>';
-    html += '<td><span class="badge '+(isIncome?'badge-income':'badge-expense')+'">'+(isIncome?'Income':'Expense')+'</span></td>';
+    if (isTransfer) {
+      html += '<td><span class="badge" style="background:rgba(99,102,241,0.12);color:#818cf8;">Transfer</span></td>';
+    } else {
+      html += '<td><span class="badge '+(isIncome?'badge-income':'badge-expense')+'">'+(isIncome?'Income':'Expense')+'</span></td>';
+    }
     var methodParts = (t.method || '').split('|');
     var methodDisplay = t.method || '';
     if (methodParts.length >= 3 && methodParts[0].toLowerCase() === 'card') methodDisplay = 'Card: ' + methodParts[1] + ' - ' + methodParts[2];
@@ -637,12 +659,12 @@ function renderTransferHistory() {
   if (!tbody) return;
   var html = '';
   (DATA.transactions || []).slice().reverse().forEach(function(t) {
-    if (t.type !== 'transfer_out' && t.type !== 'transfer_in') return;
-    var amount = parseFloat(t.amount) || 0, isIn = t.type === 'transfer_in';
+    if (t.type !== 'transfer' && t.type !== 'Transfer') return;
+    var amount = parseFloat(t.amount) || 0;
     html += '<tr>';
     html += '<td>' + escapeHtml(t.date||'') + '</td>';
-    html += '<td><span class="badge '+(isIn?'badge-income':'badge-expense')+'">'+(isIn?'In':'Out')+'</span></td>';
-    html += '<td class="'+(isIn?'income':'expense')+'">'+(isIn?'€':'-€')+Math.abs(amount).toFixed(2)+'</td>';
+    html += '<td><span class="badge badge-expense">Out</span></td>';
+    html += '<td class="expense">-€' + Math.abs(amount).toFixed(2) + '</td>';
     html += '<td>' + escapeHtml(t.description||'') + '</td>';
     html += '<td><button class="btn-remove-tx" onclick="removeTransaction('+t.id+')">X</button></td>';
     html += '</tr>';
@@ -651,7 +673,7 @@ function renderTransferHistory() {
   tbody.innerHTML = html;
 }
 
-// ================== ADD TRANSACTION (handles all account types) ==================
+// ================== ADD TRANSACTION ==================
 function addTransaction() {
   var type = document.getElementById('tx-type').value;
   var amount = parseFloat(document.getElementById('tx-amount').value);
@@ -723,8 +745,9 @@ function addTransaction() {
   document.getElementById('customCategory').value = '';
   saveToServer(getCurrentUid(), false);
 }
+window.addTransaction = addTransaction;
 
-// ================== DO TRANSFER (handles all account types) ==================
+// ================== DO TRANSFER ==================
 function doTransfer() {
   var fromAcc = document.getElementById('transfer-from').value;
   var toAcc = document.getElementById('transfer-to').value;
@@ -788,7 +811,7 @@ function doTransfer() {
   for (var i = 0; i < DATA.transactions.length; i++) if (DATA.transactions[i].id > maxId) maxId = DATA.transactions[i].id;
   DATA.transactions.push({
     id: maxId + 1,
-    type: 'Transfer',
+    type: 'transfer',
     amount: '-' + amount.toFixed(2) + ' EUR',
     method: fromAcc + ' -> ' + toAcc,
     category: 'Transfer',
@@ -801,73 +824,45 @@ function doTransfer() {
   saveToServer(getCurrentUid(), false);
   resultDiv.innerHTML = '<span style="color:#4ade80;">Transfer done</span>';
 }
+window.doTransfer = doTransfer;
 
-// ================== REMOVE TRANSACTION (fully fixed) ==================
+// ================== REMOVE TRANSACTION ==================
 async function removeTransaction(id) {
-  var confirmed = await showModal('Remove Transaction', 'Remove this transaction and reverse the balance change?');
+  var confirmed = await showModal('Remove Transaction', 'Delete this transaction? The balance will be reverted.');
   if (!confirmed) return;
 
-  var txn = null;
+  var txn = null, txnIndex = -1;
   for (var i = 0; i < DATA.transactions.length; i++) {
-    if (DATA.transactions[i].id === id) {
-      txn = DATA.transactions[i];
-      break;
-    }
+    if (DATA.transactions[i].id === id) { txn = DATA.transactions[i]; txnIndex = i; break; }
   }
-  if (!txn) {
-    showToast('Transaction not found');
-    return;
-  }
+  if (!txn) { showToast('Transaction not found', true); return; }
 
   var amount = Math.abs(parseFloat(String(txn.amount).replace(/[^0-9.-]/g, '')) || 0);
   var method = txn.method || '';
   var txnType = txn.type || '';
 
-  function updateAccount(accountType, accountName, delta) {
-    var arr = DATA[accountType];
-    if (!arr) return false;
-    for (var i = 0; i < arr.length; i++) {
-      if (arr[i].name.toLowerCase() === accountName.toLowerCase()) {
-        var curr = parseFloat(arr[i].value.replace(/[€$£¥,]/g, '')) || 0;
-        var newVal = curr + delta;
-        arr[i].value = '€' + newVal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+  function reverseAccount(accountType, accountName, delta) {
+    var typeMap = { 'card': 'cards', 'cash': 'cash', 'currency': 'currencies', 'crypto': 'crypto' };
+    var dataKey = typeMap[accountType];
+    if (!dataKey || !DATA[dataKey]) return false;
+    for (var i = 0; i < DATA[dataKey].length; i++) {
+      if (DATA[dataKey][i].name.toLowerCase() === accountName.toLowerCase()) {
+        var currentValue = parseFloat(DATA[dataKey][i].value.replace(/[€$£¥,]/g, '')) || 0;
+        var newValue = currentValue + delta;
+        DATA[dataKey][i].value = '€' + newValue.toLocaleString('en-US', { minimumFractionDigits: 2 });
         return true;
       }
     }
     return false;
   }
 
-  var typeMap = { 'card': 'cards', 'cash': 'cash', 'currency': 'currencies', 'crypto': 'crypto' };
+  var isTransfer = method.indexOf('->') >= 0;
 
-  if (txnType === 'expense') {
-    var parts = method.split('|');
-    if (parts.length >= 2) {
-      var accType = parts[0].toLowerCase();
-      var accName = parts[1];
-      var dataKey = typeMap[accType];
-      if (dataKey) {
-        if (!updateAccount(dataKey, accName, amount)) {
-          showToast('Warning: account not found for reversal', true);
-        }
-      }
-    }
-  } else if (txnType === 'income') {
-    var parts = method.split('|');
-    if (parts.length >= 2) {
-      var accType = parts[0].toLowerCase();
-      var accName = parts[1];
-      var dataKey = typeMap[accType];
-      if (dataKey) {
-        if (!updateAccount(dataKey, accName, -amount)) {
-          showToast('Warning: account not found for reversal', true);
-        }
-      }
-    }
-  } else if (txnType === 'Transfer' || txnType === 'transfer' || method.indexOf('->') >= 0) {
-    var transferParts = method.split('->');
-    if (transferParts.length === 2) {
-      var fromPart = transferParts[0].trim();
-      var toPart = transferParts[1].trim();
+  if (isTransfer) {
+    var parts = method.split('->');
+    if (parts.length === 2) {
+      var fromPart = parts[0].trim();
+      var toPart = parts[1].trim();
       var fromParts = fromPart.split('|');
       var toParts = toPart.split('|');
       if (fromParts.length >= 2 && toParts.length >= 2) {
@@ -875,28 +870,45 @@ async function removeTransaction(id) {
         var fromName = fromParts[1];
         var toType = toParts[0].toLowerCase();
         var toName = toParts[1];
-        var fromKey = typeMap[fromType];
-        var toKey = typeMap[toType];
-        if (fromKey) updateAccount(fromKey, fromName, amount);
-        if (toKey) updateAccount(toKey, toName, -amount);
+        reverseAccount(fromType, fromName, amount);
+        reverseAccount(toType, toName, -amount);
+      }
+    }
+  } else {
+    var parts = method.split('|');
+    if (parts.length >= 2) {
+      var accType = parts[0].toLowerCase();
+      var accName = parts[1];
+      if (txnType === 'expense') {
+        reverseAccount(accType, accName, amount);
+      } else if (txnType === 'income') {
+        reverseAccount(accType, accName, -amount);
       }
     }
   }
 
-  DATA.transactions = DATA.transactions.filter(function(t) { return t.id !== id; });
+  if (txnIndex >= 0) {
+    DATA.transactions.splice(txnIndex, 1);
+  }
 
   _lastSyncHash = _computeDataHash(DATA);
   syncLocalStorageWithData(getCurrentUid());
   renderAll();
   updateCharts();
   saveToServer(getCurrentUid(), false);
-  showToast('Transaction removed and balances reverted');
+  showToast('Transaction removed – balance reverted.');
 }
+window.removeTransaction = removeTransaction;
 
 // ================== ADD / REMOVE ASSETS ==================
 function addCard() { DATA.cards.push({ name: 'New Card', value: '€0.00' }); renderCards(); saveToServer(getCurrentUid(), true); }
+window.addCard = addCard;
+
 function addCashItem() { DATA.cash.push({ name: 'New Location', value: '€0.00' }); renderCash(); saveToServer(getCurrentUid(), true); }
+window.addCashItem = addCashItem;
+
 async function removeAsset(type, index) { if (await showModal('Remove Item', 'Remove this item? This cannot be undone.')) { DATA[type].splice(index, 1); renderAll(); saveToServer(getCurrentUid(), true); } }
+window.removeAsset = removeAsset;
 
 // ================== EDITING FUNCTIONS ==================
 function editValue(el) {
@@ -943,6 +955,8 @@ function editValue(el) {
     }
   });
 }
+window.editValue = editValue;
+
 function editName(el) {
   if (el.querySelector('input')) return;
   isEditing = true;
@@ -962,7 +976,7 @@ function editName(el) {
     if (newVal === '') newVal = current;
     el.innerText = newVal;
     gatherDataFromUI();
-    saveToLocalStorage();
+    syncLocalStorageWithData(getCurrentUid());
     isEditing = false;
     editingType = null;
     showToast('Renamed');
@@ -979,6 +993,8 @@ function editName(el) {
     }
   });
 }
+window.editName = editName;
+
 function editCryptoAmount(el, index) {
   if (el.querySelector('input')) return;
   isEditing = true;
@@ -1021,6 +1037,8 @@ function editCryptoAmount(el, index) {
     }
   });
 }
+window.editCryptoAmount = editCryptoAmount;
+
 function editCryptoName(el, index) {
   if (el.querySelector('input')) return;
   isEditing = true;
@@ -1061,6 +1079,8 @@ function editCryptoName(el, index) {
     }
   });
 }
+window.editCryptoName = editCryptoName;
+
 function editCurrencyAmount(el, index) {
   if (el.querySelector('input')) return;
   isEditing = true;
@@ -1105,18 +1125,33 @@ function editCurrencyAmount(el, index) {
     }
   });
 }
+window.editCurrencyAmount = editCurrencyAmount;
+
 function gatherDataFromUI() {
-  ['cards-container', 'currencies-container', 'cash-container'].forEach(function(id) {
+  var typeMap = { 'cards-container': 'cards', 'currencies-container': 'currencies', 'cash-container': 'cash', 'crypto-container': 'crypto' };
+  Object.keys(typeMap).forEach(function(id) {
     var container = document.getElementById(id);
     if (!container) return;
     var items = container.querySelectorAll('.asset-item');
-    var type = id.replace('-container', '');
+    var type = typeMap[id];
+    var oldData = DATA[type] || [];
     DATA[type] = [];
+    var oldByName = {};
+    oldData.forEach(function(item) { if (item.name) oldByName[item.name.toLowerCase().trim()] = item; });
     items.forEach(function(item) {
       var nameEl = item.querySelector('.name');
       var valEl = item.querySelector('.value');
       if (nameEl && valEl) {
-        DATA[type].push({ name: nameEl.innerText.trim(), value: valEl.innerText.trim() });
+        var name = nameEl.innerText.trim();
+        var entry = { name: name, value: valEl.innerText.trim() };
+        var old = oldByName[name.toLowerCase()];
+        if (old) {
+          if (old.amount !== undefined) entry.amount = old.amount;
+          if (old.rate !== undefined) entry.rate = old.rate;
+          if (old.price !== undefined) entry.price = old.price;
+          if (old.status !== undefined) entry.status = old.status;
+        }
+        DATA[type].push(entry);
       }
     });
   });
@@ -1148,6 +1183,8 @@ async function addCrypto() {
   showToast('Fetching live price for ' + coinName + '...');
   fetchCryptoPrice(coinName, DATA.crypto.length - 1);
 }
+window.addCrypto = addCrypto;
+
 async function addCurrency() {
   var currName = await showModal('Add Currency', 'Enter currency name or code:', true, 'Currency', 'e.g. USD, JPY, GBP');
   if (!currName) return;
@@ -1172,6 +1209,7 @@ async function addCurrency() {
   showToast('Fetching live exchange rate for ' + currName + '...');
   fetchCurrencyRate(currName, DATA.currencies.length - 1);
 }
+window.addCurrency = addCurrency;
 
 // ================== CRYPTO & CURRENCY API ==================
 var COINGECKO_CRYPTO_MAP = { 'bitcoin':'bitcoin','btc':'bitcoin','ethereum':'ethereum','eth':'ethereum','solana':'solana','sol':'solana','cardano':'cardano','ada':'cardano','ripple':'ripple','xrp':'ripple','polkadot':'polkadot','dot':'polkadot','dogecoin':'dogecoin','doge':'dogecoin','avalanche':'avalanche-2','avax':'avalanche-2','polygon':'matic-network','matic':'matic-network','chainlink':'chainlink','link':'chainlink','litecoin':'litecoin','ltc':'litecoin' };
@@ -1215,6 +1253,8 @@ function refreshCryptoPrices() {
   cryptos.forEach(function(c, i) { c.status = 'Fetching...'; fetchCryptoPrice(c.name, i, function() { completed++; if (completed === cryptos.length) { setSyncStatus('sync-ok', 'All prices updated'); showToast('All crypto prices refreshed!'); } }); });
   renderCrypto();
 }
+window.refreshCryptoPrices = refreshCryptoPrices;
+
 var CURRENCY_CODE_MAP = { 'usd':'USD','dollar':'USD','eur':'EUR','euro':'EUR','gbp':'GBP','pound':'GBP','jpy':'JPY','yen':'JPY','chf':'CHF','cad':'CAD','aud':'AUD','cny':'CNY' };
 function normalizeCurrencyCode(name) {
   var key = name.toLowerCase().trim();
@@ -1253,16 +1293,16 @@ function refreshCurrencyRates() {
   currencies.forEach(function(c, i) { c.status = 'Fetching...'; fetchCurrencyRate(c.name, i, function() { completed++; if (completed === currencies.length) showToast('All currency rates refreshed!'); }); });
   renderCurrencies();
 }
+window.refreshCurrencyRates = refreshCurrencyRates;
 
 // ================== LIVE SYNC ENGINE ==================
-var _lastSyncHash = '', _syncInterval = null, _syncInProgress = false;
 function _computeDataHash(d) {
   var s = JSON.stringify({cards:d.cards, cash:d.cash, crypto:d.crypto, currencies:d.currencies, transactions:d.transactions});
   var h = 0; for (var i=0;i<s.length;i++) { var c = s.charCodeAt(i); h = ((h<<5)-h)+c; h = h&h; }
   return 'h'+h;
 }
 function liveSync() {
-  if (_syncInProgress) return;
+  if (_syncInProgress || _saveInProgress) return;
   _syncInProgress = true;
   var uid = getCurrentUid();
   if (!uid) { _syncInProgress = false; return; }
@@ -1274,6 +1314,7 @@ function liveSync() {
       _lastSyncHash = currentHash; syncLocalStorageWithData(uid); setSyncStatus('sync-ok', 'Synced ✓'); _syncInProgress = false;
     }).catch(function() { setSyncStatus('sync-error', 'Firebase offline'); _syncInProgress = false; });
   } else {
+    if (_saveInProgress) { _syncInProgress = false; return; }
     db.ref('users/' + uid).once('value').then(function(snapshot) {
       var fbData = snapshot.val();
       if (fbData) {
@@ -1296,10 +1337,12 @@ function startLiveSync(uid) {
 function stopLiveSync() { if (_syncInterval) { clearInterval(_syncInterval); _syncInterval = null; } }
 function saveToServer(uid, updateData) {
   if (!uid) { setSyncStatus('sync-error', 'Not logged in'); return; }
+  _saveInProgress = true;
   var payload = JSON.parse(JSON.stringify(DATA)); payload.last_updated = new Date().toISOString();
   db.ref('users/' + uid).set(payload).then(function() {
     setSyncStatus('sync-ok', 'Saved to Firebase'); document.getElementById('last-updated').textContent = payload.last_updated; _lastSyncHash = _computeDataHash(DATA); syncLocalStorageWithData(uid); if (updateData) { renderAll(); updateCharts(); }
-  }).catch(function(err) { setSyncStatus('sync-error', 'Firebase save failed'); console.error(err); });
+    _saveInProgress = false;
+  }).catch(function(err) { setSyncStatus('sync-error', 'Firebase save failed'); console.error(err); _saveInProgress = false; });
 }
 function syncLocalStorageWithData(uid) {
   if (!uid) return;
@@ -1322,6 +1365,7 @@ function forceReloadFromServer() {
     } else { setSyncStatus('sync-error', 'No data in Firebase'); showToast('No data found in Firebase', true); }
   }).catch(function(err) { setSyncStatus('sync-error', 'Firebase offline'); showToast('Firebase unreachable', true); console.error(err); });
 }
+window.forceReloadFromServer = forceReloadFromServer;
 
 // ================== MONTHLY SNAPSHOTS ==================
 function getMonthlySnapshots() { try { var raw = localStorage.getItem('monthlySnapshots'); return raw ? JSON.parse(raw) : []; } catch(e) { return []; } }
@@ -1338,7 +1382,11 @@ function saveMonthlySnapshot() {
   if (idx >= 0) snaps[idx] = snap; else snaps.push(snap);
   saveMonthlySnapshots(snaps); renderMonthlySnapshots(); showToast('Snapshot saved for ' + snap.label);
 }
-async function clearMonthlyData() { var confirmed = await showModal('Reset Month', 'Reset all transactions and start a new month? Current state will be saved first.'); if (!confirmed) return; saveMonthlySnapshot(); DATA.transactions = []; saveToServer(); saveToLocalStorage(); renderAll(); updateCharts(); showToast('Month reset! Transactions cleared. Snapshot saved.'); }
+window.saveMonthlySnapshot = saveMonthlySnapshot;
+
+async function clearMonthlyData() { var confirmed = await showModal('Reset Month', 'Reset all transactions and start a new month? Current state will be saved first.'); if (!confirmed) return; saveMonthlySnapshot(); DATA.transactions = []; saveToServer(); syncLocalStorageWithData(getCurrentUid()); renderAll(); updateCharts(); showToast('Month reset! Transactions cleared. Snapshot saved.'); }
+window.clearMonthlyData = clearMonthlyData;
+
 function renderMonthlySnapshots() {
   var c = document.getElementById('monthly-snapshots-container'); if (!c) return; var snaps = getMonthlySnapshots();
   if (snaps.length === 0) { c.innerHTML = '<div style="text-align:center;color:#666;padding:40px;background:#1a1a2e;border-radius:12px;border:1px solid #2a2a4a;"><p style="font-size:1.2rem;margin-bottom:8px;">No monthly snapshots yet</p><p style="font-size:0.85rem;">Click "Save Current Month" at month-end to store your financial overview.</p></div>'; return; }
@@ -1354,6 +1402,8 @@ function renderMonthlySnapshots() {
   c.innerHTML = html;
 }
 async function deleteMonthlySnapshot(key) { if (await showModal('Delete Snapshot', 'Delete this snapshot?')) { var snaps = getMonthlySnapshots().filter(function(s){return s.key!==key;}); saveMonthlySnapshots(snaps); renderMonthlySnapshots(); showToast('Snapshot deleted'); } }
+window.deleteMonthlySnapshot = deleteMonthlySnapshot;
+
 function getCurrentMonthKey() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
 function getMonthLabel(key) { var parts = key.split('-'); var months = ['January','February','March','April','May','June','July','August','September','October','November','December']; return months[parseInt(parts[1]) - 1] + ' ' + parts[0]; }
 
