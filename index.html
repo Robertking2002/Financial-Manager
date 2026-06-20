@@ -783,71 +783,108 @@ function doTransfer() {
 async function removeTransaction(id) {
   var confirmed = await showModal('Remove Transaction', 'Remove this transaction and reverse the balance change?');
   if (!confirmed) return;
+
   var txn = null;
-  for (var i = 0; i < DATA.transactions.length; i++) if (DATA.transactions[i].id === id) { txn = DATA.transactions[i]; break; }
-  if (!txn) { showToast('Transaction not found'); return; }
+  for (var i = 0; i < DATA.transactions.length; i++) {
+    if (DATA.transactions[i].id === id) {
+      txn = DATA.transactions[i];
+      break;
+    }
+  }
+  if (!txn) {
+    showToast('Transaction not found');
+    return;
+  }
+
   var amount = Math.abs(parseFloat(String(txn.amount).replace(/[^0-9.-]/g, '')) || 0);
   var method = txn.method || '';
   var txnType = txn.type || '';
-  var methodParts = method.split('|');
-  var methodType = methodParts[0].toLowerCase();
+
+  // --------------------------------------------
+  // Helper to update an account balance by delta
+  // --------------------------------------------
+  function updateAccount(accountType, accountName, delta) {
+    // delta: positive = add, negative = subtract
+    var arr = DATA[accountType]; // e.g., DATA.cards, DATA.cash, DATA.currencies, DATA.crypto
+    if (!arr) return false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].name.toLowerCase() === accountName.toLowerCase()) {
+        var curr = parseFloat(arr[i].value.replace(/[€$£¥,]/g, '')) || 0;
+        var newVal = curr + delta;
+        arr[i].value = newVal.toFixed(2) + ' EUR';
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // --------------------------------------------
+  // Reverse based on transaction type
+  // --------------------------------------------
   if (txnType === 'expense') {
-    if (methodType === 'card' && methodParts.length >= 2) {
-      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cards[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
-      }
-    } else if (methodType === 'cash' && methodParts.length >= 2) {
-      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cash[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
+    // Expense: we subtracted amount from the account → now add it back
+    var parts = method.split('|');
+    if (parts.length >= 2) {
+      var accType = parts[0].toLowerCase();
+      var accName = parts[1];
+      // map 'card'→'cards', 'cash'→'cash', 'currency'→'currencies', 'crypto'→'crypto'
+      var typeMap = { 'card': 'cards', 'cash': 'cash', 'currency': 'currencies', 'crypto': 'crypto' };
+      var dataKey = typeMap[accType];
+      if (dataKey && updateAccount(dataKey, accName, amount)) {
+        // success
+      } else {
+        showToast('Warning: account not found for reversal', true);
       }
     }
+
   } else if (txnType === 'income') {
-    if (methodType === 'card' && methodParts.length >= 2) {
-      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cards[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
-      }
-    } else if (methodType === 'cash' && methodParts.length >= 2) {
-      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === methodParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cash[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
-      }
-    }
-  } else if (txnType === 'Transfer' && method.indexOf('->') >= 0) {
-    var parts = method.split('->');
-    var fromAcc = parts[0].trim(), toAcc = parts[1].trim();
-    var fromParts = fromAcc.split('|'), toParts = toAcc.split('|');
-    if (fromParts[0].toLowerCase() === 'card') {
-      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === fromParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cards[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
-      }
-    } else if (fromParts[0].toLowerCase() === 'cash') {
-      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === fromParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cash[i].value = (curr + amount).toFixed(2) + ' EUR'; break;
+    // Income: we added amount to the account → now subtract it
+    var parts = method.split('|');
+    if (parts.length >= 2) {
+      var accType = parts[0].toLowerCase();
+      var accName = parts[1];
+      var typeMap = { 'card': 'cards', 'cash': 'cash', 'currency': 'currencies', 'crypto': 'crypto' };
+      var dataKey = typeMap[accType];
+      if (dataKey && updateAccount(dataKey, accName, -amount)) {
+        // success
+      } else {
+        showToast('Warning: account not found for reversal', true);
       }
     }
-    if (toParts[0].toLowerCase() === 'card') {
-      for (var i = 0; i < DATA.cards.length; i++) if (DATA.cards[i].name.toLowerCase() === toParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cards[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cards[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
-      }
-    } else if (toParts[0].toLowerCase() === 'cash') {
-      for (var i = 0; i < DATA.cash.length; i++) if (DATA.cash[i].name.toLowerCase() === toParts[1].toLowerCase()) {
-        var curr = parseFloat(String(DATA.cash[i].value).replace(/[^0-9.-]/g, '')) || 0;
-        DATA.cash[i].value = (curr - amount).toFixed(2) + ' EUR'; break;
+
+  } else if (txnType === 'Transfer' || txnType === 'transfer' || (txnType === 'Transfer' && method.indexOf('->') >= 0)) {
+    // Transfer: we deducted from source and added to destination → reverse
+    var transferParts = method.split('->');
+    if (transferParts.length === 2) {
+      var fromPart = transferParts[0].trim();
+      var toPart = transferParts[1].trim();
+      var fromParts = fromPart.split('|');
+      var toParts = toPart.split('|');
+      if (fromParts.length >= 2 && toParts.length >= 2) {
+        var fromType = fromParts[0].toLowerCase();
+        var fromName = fromParts[1];
+        var toType = toParts[0].toLowerCase();
+        var toName = toParts[1];
+        var typeMap = { 'card': 'cards', 'cash': 'cash', 'currency': 'currencies', 'crypto': 'crypto' };
+        var fromKey = typeMap[fromType];
+        var toKey = typeMap[toType];
+        // Reverse: add back to source (since we subtracted), subtract from destination (since we added)
+        if (fromKey) updateAccount(fromKey, fromName, amount);
+        if (toKey) updateAccount(toKey, toName, -amount);
       }
     }
   }
+
+  // Remove transaction from DATA
   DATA.transactions = DATA.transactions.filter(function(t) { return t.id !== id; });
+
+  // Update sync and save
   _lastSyncHash = _computeDataHash(DATA);
   syncLocalStorageWithData(getCurrentUid());
-  renderAll(); updateCharts();
+  renderAll();
+  updateCharts();
   saveToServer(getCurrentUid(), false);
-  showToast('Transaction removed');
+  showToast('Transaction removed and balances reverted');
 }
 function addCard() { DATA.cards.push({ name: 'New Card', value: '€0.00' }); renderCards(); saveToServer(getCurrentUid(), true); }
 function addCashItem() { DATA.cash.push({ name: 'New Location', value: '€0.00' }); renderCash(); saveToServer(getCurrentUid(), true); }
